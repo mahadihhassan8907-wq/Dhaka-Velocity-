@@ -525,15 +525,18 @@ func _process(delta: float) -> void:
 			_advance_city_tour()
 		else:
 			checkpoint.rotate_y(delta * 0.8)
+func _move_traffic(delta: float) -> void:
 	for i in range(traffic_cars.size()):
 		var traffic := traffic_cars[i]
-		traffic.position.z += (5.0 + float(i % 2) * 1.5) * delta * (1.0 if i % 2 == 0 else -1.0)
+		var direction := 1.0 if i % 2 == 0 else -1.0
+		traffic.position.z += (5.0 + float(i % 2) * 1.5) * delta * direction
 		if traffic.position.z > 48.0:
 			traffic.position.z = -48.0
 		elif traffic.position.z < -48.0:
 			traffic.position.z = 48.0
 
 func _physics_process(delta: float) -> void:
+	_move_traffic(delta)
 	if driving:
 		var using_nitro := nitro_pressed and throttle_input > 0.0 and nitro_energy > 0.0 and not brake_pressed
 		if using_nitro:
