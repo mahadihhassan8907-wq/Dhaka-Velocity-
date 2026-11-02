@@ -12,7 +12,15 @@ var speed := 0.0
 var status_label: Label
 var mission_label: Label
 var checkpoint: Node3D
+var checkpoint_tag: Label3D
+var mission_index := 0
 var mission_complete := false
+var mission_points: Array[Vector3] = [
+	Vector3(0, 0.18, -39),
+	Vector3(0, 0.18, 39),
+	Vector3(-39, 0.18, 0)
+]
+var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
 
 func _ready() -> void:
@@ -131,7 +139,7 @@ func _build_traffic() -> void:
 func _build_checkpoint() -> void:
 	checkpoint = Node3D.new()
 	checkpoint.name = "FirstMissionCheckpoint"
-	checkpoint.position = Vector3(0, 0.18, -39)
+	checkpoint.position = mission_points[mission_index]
 	add_child(checkpoint)
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
@@ -150,12 +158,12 @@ func _build_checkpoint() -> void:
 	beacon.position.y = 1.5
 	beacon.material_override = _mat(Color(0.12, 0.95, 0.72, 0.35))
 	checkpoint.add_child(beacon)
-	var tag := Label3D.new()
-	tag.text = "FIRST DRIVE"
-	tag.position = Vector3(0, 3.2, 0)
-	tag.font_size = 32
-	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	checkpoint.add_child(tag)
+	checkpoint_tag = Label3D.new()
+	checkpoint_tag.text = mission_names[mission_index]
+	checkpoint_tag.position = Vector3(0, 3.2, 0)
+	checkpoint_tag.font_size = 32
+	checkpoint_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	checkpoint.add_child(checkpoint_tag)
 
 func _build_camera() -> void:
 	camera = Camera3D.new()
@@ -195,7 +203,7 @@ func _build_ui() -> void:
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
 	mission_label = Label.new()
-	mission_label.text = "MISSION 01  •  Drive to the glowing checkpoint"
+	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
 	mission_label.add_theme_font_size_override("font_size", 16)
 	layer.add_child(mission_label)
@@ -261,14 +269,24 @@ func _toggle_vehicle() -> void:
 	else:
 		status_label.text = "Move closer to the red car first"
 
+func _advance_city_tour() -> void:
+	mission_index += 1
+	if mission_index >= mission_points.size():
+		mission_complete = true
+		mission_label.text = "CITY TOUR COMPLETE  •  3/3 checkpoints reached"
+		status_label.text = "Excellent driving! City Tour completed."
+		checkpoint.visible = false
+		return
+	checkpoint.global_position = mission_points[mission_index]
+	checkpoint_tag.text = mission_names[mission_index]
+	mission_label.text = "CITY TOUR %02d/03  •  Reach %s" % [mission_index + 1, mission_names[mission_index]]
+	status_label.text = "Checkpoint %d/3 reached! Next destination marked." % mission_index
+
 func _process(delta: float) -> void:
 	if not mission_complete:
 		var actor_position := car.global_position if driving else player.global_position
 		if actor_position.distance_to(checkpoint.global_position) < 3.2:
-			mission_complete = true
-			mission_label.text = "MISSION COMPLETE  •  First Drive finished!"
-			status_label.text = "Great driving! First mission complete."
-			checkpoint.visible = false
+			_advance_city_tour()
 		else:
 			checkpoint.rotate_y(delta * 0.8)
 	for i in range(traffic_cars.size()):
