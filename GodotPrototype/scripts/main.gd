@@ -7,6 +7,10 @@ var paint_index := 0
 var suv_visual: Node3D
 var suv_paint: MeshInstance3D
 var selected_suv := false
+var sport_spoiler: Node3D
+var spoiler_enabled := true
+var nitro_pressed := false
+var nitro_energy := 3.0
 var sport_rims: Array[MeshInstance3D] = []
 var suv_rims: Array[MeshInstance3D] = []
 var rim_index := 0
@@ -129,6 +133,12 @@ func _build_car() -> void:
 	add_child(car)
 	car_paint = _box(car, Vector3(2.0, 0.7, 3.8), Vector3.ZERO, paint_colors[paint_index])
 	_box(car, Vector3(1.55, 0.65, 1.7), Vector3(0, 0.62, -0.25), Color(0.12, 0.22, 0.30))
+	sport_spoiler = Node3D.new()
+	sport_spoiler.name = "RearSpoiler"
+	car.add_child(sport_spoiler)
+	_box(sport_spoiler, Vector3(1.9, 0.10, 0.34), Vector3(0, 0.66, 1.72), Color(0.06, 0.07, 0.09))
+	for spoiler_x in [-0.68, 0.68]:
+		_box(sport_spoiler, Vector3(0.08, 0.34, 0.08), Vector3(spoiler_x, 0.48, 1.62), Color(0.08, 0.09, 0.11))
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
@@ -230,7 +240,8 @@ func _build_ui() -> void:
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
-	for button in [left, forward, back, right, brake, enter]:
+	var nitro := _make_button("NITRO", 64)
+	for button in [left, forward, back, right, brake, nitro, enter]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -243,6 +254,8 @@ func _build_ui() -> void:
 	brake.button_down.connect(func(): brake_pressed = true)
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
+	nitro.button_down.connect(func(): nitro_pressed = true)
+	nitro.button_up.connect(func(): nitro_pressed = false)
 	var garage_panel := VBoxContainer.new()
 	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	garage_panel.position = Vector2(-142, 42)
@@ -254,6 +267,7 @@ func _build_ui() -> void:
 	var silver := _make_button("SILVER", 128)
 	var finish := _make_button("FINISH: GLOSS", 128)
 	var rims := _make_button("RIMS: SILVER", 128)
+	var spoiler := _make_button("SPOILER: ON", 128)
 	var mix_color := ColorPickerButton.new()
 	mix_color.text = "MIX COLOR"
 	mix_color.custom_minimum_size = Vector2(128, 54)
@@ -266,12 +280,14 @@ func _build_ui() -> void:
 	garage_panel.add_child(finish)
 	garage_panel.add_child(mix_color)
 	garage_panel.add_child(rims)
+	garage_panel.add_child(spoiler)
 	paint.pressed.connect(_cycle_car_paint)
 	next_car.pressed.connect(_cycle_vehicle_model)
 	silver.pressed.connect(_apply_silver_paint)
 	finish.pressed.connect(_cycle_paint_finish)
 	mix_color.color_changed.connect(_apply_custom_car_color)
 	rims.pressed.connect(_cycle_rim_color)
+	spoiler.pressed.connect(_toggle_spoiler)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -379,6 +395,14 @@ func _cycle_rim_color() -> void:
 		rim.material_override = material
 	status_label.text = "GARAGE  •  %s alloy rims fitted" % rim_names[rim_index]
 
+func _toggle_spoiler() -> void:
+	if selected_suv:
+		status_label.text = "Spoiler customization is available on the Velocity Sport"
+		return
+	spoiler_enabled = not spoiler_enabled
+	sport_spoiler.visible = spoiler_enabled
+	status_label.text = "GARAGE  •  Rear spoiler %s" % ("installed" if spoiler_enabled else "removed")
+
 func _cycle_vehicle_model() -> void:
 	if driving:
 		status_label.text = "Exit the car before switching models"
@@ -434,14 +458,19 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if driving:
-		var target_speed := 0.0 if brake_pressed else (throttle_input * 16.0 if throttle_input > 0.0 else throttle_input * 8.0)
-		var acceleration := 28.0 if brake_pressed else (10.0 if throttle_input != 0.0 else 15.0)
+		var using_nitro := nitro_pressed and throttle_input > 0.0 and nitro_energy > 0.0 and not brake_pressed
+		if using_nitro:
+			nitro_energy = maxf(0.0, nitro_energy - delta)
+		elif not nitro_pressed:
+			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
+		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
+		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		speed = move_toward(speed, target_speed, acceleration * delta)
 		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
 		car.rotate_y(-steer_input * steering_strength * delta * 1.35 * signf(speed))
 		car.velocity = -car.global_basis.z * speed
 		car.move_and_slide()
-		status_label.text = "DRIVING  •  %d km/h  •  BRAKE to stop" % int(absf(speed) * 3.6)
+		status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
 		player.velocity.x = direction.x * 5.0
