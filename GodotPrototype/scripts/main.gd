@@ -556,13 +556,13 @@ func _physics_process(delta: float) -> void:
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		var traffic_blocked := false
 		for traffic in traffic_cars:
-			var relative := traffic.global_position - car.global_position
-			if relative.length() < 2.7:
+			var local_traffic := car.to_local(traffic.global_position)
+			var approaching := local_traffic.z < -1.5 and local_traffic.z > -6.0
+			if approaching and absf(local_traffic.x) < 2.35 and absf(speed) > 2.0:
 				traffic_blocked = true
 				break
 		if traffic_blocked:
-			speed = move_toward(speed, 0.0, 34.0 * delta)
-			collision_feedback_timer = 0.7
+			speed = move_toward(speed, 0.0, 24.0 * delta)
 		else:
 			speed = move_toward(speed, target_speed, acceleration * delta)
 		if collision_feedback_timer > 0.0:
@@ -576,15 +576,28 @@ func _physics_process(delta: float) -> void:
 		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.34 * drift_intensity
 		car.velocity = forward_velocity + drift_slide
 		car.move_and_slide()
+		var impact_detected := false
 		for collision_index in range(car.get_slide_collision_count()):
 			var hit := car.get_slide_collision(collision_index)
-			if hit.get_collider() is AnimatableBody3D and String(hit.get_collider().name).begins_with("Traffic_"):
-				speed *= 0.35
-				car.velocity = hit.get_normal() * 3.0
-				collision_feedback_timer = 1.0
-				break
+			var collider := hit.get_collider()
+			var horizontal_impact := absf(hit.get_normal().y) < 0.65
+			if horizontal_impact and collider != null:
+				var traffic_hit := collider is AnimatableBody3D and String(collider.name).begins_with("Traffic_")
+				if traffic_hit:
+					speed *= 0.25
+					car.velocity = hit.get_normal() * 2.0
+					collision_feedback_timer = 1.0
+					impact_detected = true
+					break
+				elif absf(speed) > 2.0:
+					speed *= 0.55
+					collision_feedback_timer = 0.65
+					impact_detected = true
+					break
 		if collision_feedback_timer > 0.0:
-			status_label.text = "TRAFFIC ALERT  •  Slow down!"
+			status_label.text = "COLLISION  •  Vehicle impact detected!"
+		elif traffic_blocked:
+			status_label.text = "TRAFFIC AHEAD  •  Slow down!"
 		elif drift_pressed:
 			status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6)
 		else:
