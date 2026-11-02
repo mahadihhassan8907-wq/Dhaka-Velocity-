@@ -2,6 +2,10 @@ extends Node3D
 
 var player: CharacterBody3D
 var car: CharacterBody3D
+var car_paint: MeshInstance3D
+var paint_index := 0
+var paint_colors: Array[Color] = [Color(0.88, 0.12, 0.08), Color(0.08, 0.32, 0.92), Color(0.95, 0.68, 0.08), Color(0.08, 0.62, 0.34)]
+var paint_names: Array[String] = ["RED", "BLUE", "GOLD", "GREEN"]
 var camera: Camera3D
 var driving := false
 var move_dir := Vector2.ZERO
@@ -112,7 +116,7 @@ func _build_car() -> void:
 	car.name = "Velocity"
 	car.position = Vector3(0, 0.75, 5)
 	add_child(car)
-	_box(car, Vector3(2.0, 0.7, 3.8), Vector3.ZERO, Color(0.88, 0.12, 0.08))
+	car_paint = _box(car, Vector3(2.0, 0.7, 3.8), Vector3.ZERO, paint_colors[paint_index])
 	_box(car, Vector3(1.55, 0.65, 1.7), Vector3(0, 0.62, -0.25), Color(0.12, 0.22, 0.30))
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
@@ -189,7 +193,8 @@ func _build_ui() -> void:
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
-	for button in [left, forward, back, right, brake, enter]:
+	var paint := _make_button("PAINT", 68)
+	for button in [left, forward, back, right, brake, enter, paint]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -202,6 +207,7 @@ func _build_ui() -> void:
 	brake.button_down.connect(func(): brake_pressed = true)
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
+	paint.pressed.connect(_cycle_car_paint)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -255,6 +261,14 @@ func _press_reverse() -> void:
 func _release_reverse() -> void:
 	throttle_input = 0.0
 	_set_move(Vector2(move_dir.x, 0))
+
+func _cycle_car_paint() -> void:
+	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
+		status_label.text = "Move closer to the red car to use the paint shop"
+		return
+	paint_index = (paint_index + 1) % paint_colors.size()
+	car_paint.material_override = _mat(paint_colors[paint_index])
+	status_label.text = "GARAGE  •  Car color changed to %s" % paint_names[paint_index]
 
 func _toggle_vehicle() -> void:
 	if driving:
