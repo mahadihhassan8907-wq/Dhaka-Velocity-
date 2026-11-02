@@ -45,6 +45,8 @@ var traffic_cars: Array[Node3D] = []
 var brake_lamps: Array[MeshInstance3D] = []
 var camera_base_fov := 70.0
 var drift_intensity := 0.0
+var collision_feedback_timer := 0.0
+var steering_visual := 0.0
 
 func _ready() -> void:
 	_build_city()
@@ -502,16 +504,34 @@ func _physics_process(delta: float) -> void:
 		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
 		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
-		speed = move_toward(speed, target_speed, acceleration * delta)
+		var traffic_blocked := false
+		for traffic in traffic_cars:
+			var relative := traffic.global_position - car.global_position
+			if relative.length() < 2.7:
+				traffic_blocked = true
+				break
+		if traffic_blocked:
+			speed = move_toward(speed, 0.0, 34.0 * delta)
+			collision_feedback_timer = 0.7
+		else:
+			speed = move_toward(speed, target_speed, acceleration * delta)
+		if collision_feedback_timer > 0.0:
+			collision_feedback_timer = maxf(0.0, collision_feedback_timer - delta)
 		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
 		var steering_rate := 1.75 if drift_pressed else 1.25
-		car.rotate_y(-steer_input * steering_strength * delta * steering_rate * signf(speed))
+		steering_visual = move_toward(steering_visual, steer_input, delta * 5.0)
+		car.rotate_y(-steering_visual * steering_strength * delta * steering_rate * signf(speed))
 		drift_intensity = move_toward(drift_intensity, 1.0 if drift_pressed and absf(speed) > 5.0 and absf(steer_input) > 0.1 else 0.0, delta * 2.8)
 		var forward_velocity := -car.global_basis.z * speed
 		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.34 * drift_intensity
 		car.velocity = forward_velocity + drift_slide
 		car.move_and_slide()
-		status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6) if drift_pressed else "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
+		if collision_feedback_timer > 0.0:
+			status_label.text = "TRAFFIC ALERT  •  Slow down!"
+		elif drift_pressed:
+			status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6)
+		else:
+			status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
 		_update_brake_lights(false)
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
