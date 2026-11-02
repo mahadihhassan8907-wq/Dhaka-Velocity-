@@ -191,7 +191,7 @@ func _build_player() -> void:
 func _build_car() -> void:
 	car = CharacterBody3D.new()
 	car.name = "Velocity"
-	car.position = Vector3(0, 0.75, 5)
+	car.position = Vector3(0, 0.53, 5)
 	add_child(car)
 	car_paint = _box(car, Vector3(2.0, 0.7, 3.8), Vector3.ZERO, paint_colors[paint_index])
 	_box(car, Vector3(1.55, 0.65, 1.7), Vector3(0, 0.62, -0.25), Color(0.12, 0.22, 0.30))
@@ -394,6 +394,7 @@ func _build_ui() -> void:
 		button.custom_minimum_size = Vector2(0, 50)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		panel.add_child(button)
+	steering_buttons = [left, right]
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
 	right.button_down.connect(_press_right)
@@ -409,13 +410,19 @@ func _build_ui() -> void:
 	nitro.button_up.connect(func(): nitro_pressed = false)
 	drift.button_down.connect(func(): drift_pressed = true)
 	drift.button_up.connect(func(): drift_pressed = false)
+	var garage_scroll := ScrollContainer.new()
+	garage_scroll.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	garage_scroll.position = Vector2(-174, 42)
+	garage_scroll.size = Vector2(166, 330)
+	garage_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	layer.add_child(garage_scroll)
 	var garage_panel := VBoxContainer.new()
-	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	garage_panel.position = Vector2(-142, 42)
-	garage_panel.size = Vector2(148, 310)
-	garage_panel.add_theme_constant_override("separation", 5)
-	layer.add_child(garage_panel)
+	garage_panel.custom_minimum_size = Vector2(154, 0)
+	garage_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	garage_panel.add_theme_constant_override("separation", 4)
+	garage_scroll.add_child(garage_panel)
 	steering_mode_button = _make_button("STEER: BUTTONS", 140)
+	steering_mode_button.custom_minimum_size.y = 42
 	garage_panel.add_child(steering_mode_button)
 	steering_mode_button.pressed.connect(_toggle_steering_mode)
 	var paint := _make_button("PAINT", 128)
@@ -427,7 +434,7 @@ func _build_ui() -> void:
 	var lights := _make_button("LIGHTS: ON", 128)
 	var mix_color := ColorPickerButton.new()
 	mix_color.text = "MIX COLOR"
-	mix_color.custom_minimum_size = Vector2(128, 54)
+	mix_color.custom_minimum_size = Vector2(128, 46)
 	mix_color.color = Color(0.25, 0.55, 0.9)
 	mix_color.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mix_color.add_theme_font_size_override("font_size", 15)
@@ -484,7 +491,7 @@ func _set_wheel_steering(value: float) -> void:
 func _make_button(caption: String, button_width: float) -> Button:
 	var button := Button.new()
 	button.text = caption
-	button.custom_minimum_size = Vector2(button_width, 58)
+	button.custom_minimum_size = Vector2(button_width, 44)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 17)
 	return button
