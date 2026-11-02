@@ -117,6 +117,12 @@ func _ready() -> void:
 	steering_wheel.visible = steering_mode == 1
 	for button in steering_buttons:
 		button.visible = steering_mode == 0
+	for light in headlight_nodes:
+		light.visible = headlights_enabled
+	for lamp in headlamp_meshes:
+		var lamp_material := lamp.material_override as StandardMaterial3D
+		if lamp_material:
+			lamp_material.emission_energy_multiplier = 0.7 if headlights_enabled else 0.0
 
 func _load_saved_settings() -> void:
 	var config := ConfigFile.new()
@@ -651,6 +657,7 @@ func _cycle_vehicle_model() -> void:
 	suv_visual.visible = selected_suv
 	car_paint.visible = not selected_suv
 	status_label.text = "GARAGE  •  Selected %s" % ("CITY SUV" if selected_suv else "VELOCITY SPORT")
+	_save_game_settings()
 
 func _toggle_vehicle() -> void:
 	if driving:
