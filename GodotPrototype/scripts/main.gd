@@ -105,6 +105,7 @@ var steering_buttons: Array[Button] = []
 var steering_mode_button: Button
 
 func _ready() -> void:
+	_load_saved_settings()
 	_build_city()
 	_build_player()
 	_build_car()
@@ -112,6 +113,37 @@ func _ready() -> void:
 	_build_checkpoint()
 	_build_camera()
 	_build_ui()
+	steering_mode_button.text = "STEER: WHEEL" if steering_mode == 1 else "STEER: BUTTONS"
+	steering_wheel.visible = steering_mode == 1
+	for button in steering_buttons:
+		button.visible = steering_mode == 0
+
+func _load_saved_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load("user://dhaka_velocity.cfg") != OK:
+		return
+	paint_index = clampi(int(config.get_value("garage", "paint_index", paint_index)), 0, paint_colors.size() - 1)
+	current_paint_color = config.get_value("garage", "paint_color", paint_colors[paint_index])
+	finish_index = clampi(int(config.get_value("garage", "finish_index", finish_index)), 0, finish_names.size() - 1)
+	rim_index = clampi(int(config.get_value("garage", "rim_index", rim_index)), 0, rim_colors.size() - 1)
+	selected_suv = bool(config.get_value("garage", "selected_suv", selected_suv))
+	spoiler_enabled = bool(config.get_value("garage", "spoiler_enabled", spoiler_enabled))
+	headlights_enabled = bool(config.get_value("garage", "headlights_enabled", headlights_enabled))
+	steering_mode = clampi(int(config.get_value("controls", "steering_mode", steering_mode)), 0, 1)
+
+func _save_game_settings() -> void:
+	var config := ConfigFile.new()
+	config.set_value("garage", "paint_index", paint_index)
+	config.set_value("garage", "paint_color", current_paint_color)
+	config.set_value("garage", "finish_index", finish_index)
+	config.set_value("garage", "rim_index", rim_index)
+	config.set_value("garage", "selected_suv", selected_suv)
+	config.set_value("garage", "spoiler_enabled", spoiler_enabled)
+	config.set_value("garage", "headlights_enabled", headlights_enabled)
+	config.set_value("controls", "steering_mode", steering_mode)
+	var error := config.save("user://dhaka_velocity.cfg")
+	if error != OK:
+		push_warning("Could not save Dhaka Velocity settings: %s" % error_string(error))
 
 func _mat(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -223,7 +255,15 @@ func _build_car() -> void:
 			var suv_rim := _make_rim(suv_visual, x, z)
 			suv_rims.append(suv_rim)
 	_make_vehicle_lights(suv_visual)
-	suv_visual.visible = false
+	suv_visual.visible = selected_suv
+	car_paint.visible = not selected_suv
+	_refresh_car_paint()
+	for rim in sport_rims + suv_rims:
+		var rim_material := _mat(rim_colors[rim_index])
+		rim_material.metallic = 0.82
+		rim_material.roughness = 0.24
+		rim.material_override = rim_material
+	sport_spoiler.visible = spoiler_enabled
 
 
 
@@ -284,6 +324,7 @@ func _toggle_headlights() -> void:
 		if material:
 			material.emission_energy_multiplier = 0.7 if headlights_enabled else 0.0
 	status_label.text = "LIGHTS  •  %s" % ("ON" if headlights_enabled else "OFF")
+	_save_game_settings()
 
 func _update_turn_signals(delta: float) -> void:
 	signal_blink_timer += delta
@@ -483,6 +524,7 @@ func _toggle_steering_mode() -> void:
 	steer_input = 0.0
 	steering_visual = 0.0
 	status_label.text = "Steering mode: %s" % ("Virtual wheel" if use_wheel else "Left/right buttons")
+	_save_game_settings()
 
 func _set_wheel_steering(value: float) -> void:
 	if steering_mode == 1:
@@ -539,6 +581,7 @@ func _cycle_car_paint() -> void:
 	current_paint_color = paint_colors[paint_index]
 	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Car color changed to %s" % paint_names[paint_index]
+	_save_game_settings()
 
 func _apply_custom_car_color(color: Color) -> void:
 	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
@@ -547,6 +590,7 @@ func _apply_custom_car_color(color: Color) -> void:
 	current_paint_color = color
 	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Custom mixed paint applied"
+	_save_game_settings()
 
 func _apply_silver_paint() -> void:
 	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
@@ -556,6 +600,7 @@ func _apply_silver_paint() -> void:
 	finish_index = 2
 	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Metallic silver finish applied"
+	_save_game_settings()
 func _refresh_car_paint() -> void:
 	var metallic_values: Array[float] = [0.0, 0.25, 0.92]
 	var roughness_values: Array[float] = [0.88, 0.22, 0.16]
@@ -572,6 +617,7 @@ func _cycle_paint_finish() -> void:
 	finish_index = (finish_index + 1) % finish_names.size()
 	_refresh_car_paint()
 	status_label.text = "GARAGE  •  %s finish applied" % finish_names[finish_index]
+	_save_game_settings()
 func _cycle_rim_color() -> void:
 	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
 		status_label.text = "Move closer to your car to customize the rims"
@@ -583,6 +629,7 @@ func _cycle_rim_color() -> void:
 		material.roughness = 0.24
 		rim.material_override = material
 	status_label.text = "GARAGE  •  %s alloy rims fitted" % rim_names[rim_index]
+	_save_game_settings()
 
 func _toggle_spoiler() -> void:
 	if selected_suv:
@@ -591,6 +638,7 @@ func _toggle_spoiler() -> void:
 	spoiler_enabled = not spoiler_enabled
 	sport_spoiler.visible = spoiler_enabled
 	status_label.text = "GARAGE  •  Rear spoiler %s" % ("installed" if spoiler_enabled else "removed")
+	_save_game_settings()
 
 func _cycle_vehicle_model() -> void:
 	if driving:
