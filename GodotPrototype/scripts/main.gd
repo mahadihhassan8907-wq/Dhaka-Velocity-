@@ -11,6 +11,7 @@ var sport_spoiler: Node3D
 var spoiler_enabled := true
 var nitro_pressed := false
 var nitro_energy := 3.0
+var drift_pressed := false
 var sport_rims: Array[MeshInstance3D] = []
 var suv_rims: Array[MeshInstance3D] = []
 var rim_index := 0
@@ -241,7 +242,8 @@ func _build_ui() -> void:
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
 	var nitro := _make_button("NITRO", 64)
-	for button in [left, forward, back, right, brake, nitro, enter]:
+	var drift := _make_button("DRIFT", 64)
+	for button in [left, forward, back, right, brake, drift, nitro, enter]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -256,6 +258,8 @@ func _build_ui() -> void:
 	enter.pressed.connect(_toggle_vehicle)
 	nitro.button_down.connect(func(): nitro_pressed = true)
 	nitro.button_up.connect(func(): nitro_pressed = false)
+	drift.button_down.connect(func(): drift_pressed = true)
+	drift.button_up.connect(func(): drift_pressed = false)
 	var garage_panel := VBoxContainer.new()
 	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	garage_panel.position = Vector2(-142, 42)
@@ -467,10 +471,13 @@ func _physics_process(delta: float) -> void:
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		speed = move_toward(speed, target_speed, acceleration * delta)
 		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
-		car.rotate_y(-steer_input * steering_strength * delta * 1.35 * signf(speed))
-		car.velocity = -car.global_basis.z * speed
+		var steering_rate := 1.85 if drift_pressed else 1.35
+		car.rotate_y(-steer_input * steering_strength * delta * steering_rate * signf(speed))
+		var forward_velocity := -car.global_basis.z * speed
+		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.42 if drift_pressed else Vector3.ZERO
+		car.velocity = forward_velocity + drift_slide
 		car.move_and_slide()
-		status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
+		status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6) if drift_pressed else "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
 		player.velocity.x = direction.x * 5.0
