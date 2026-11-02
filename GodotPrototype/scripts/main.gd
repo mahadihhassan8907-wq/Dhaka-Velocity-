@@ -42,6 +42,8 @@ var mission_points: Array[Vector3] = [
 ]
 var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
+var brake_lamps: Array[MeshInstance3D] = []
+var camera_base_fov := 70.0
 
 func _ready() -> void:
 	_build_city()
@@ -143,6 +145,7 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+	_make_vehicle_lights(car)
 			var sport_rim := _make_rim(car, x, z)
 			sport_rims.append(sport_rim)
 	var car_collision := CollisionShape3D.new()
@@ -160,8 +163,32 @@ func _build_car() -> void:
 			_box(suv_visual, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
 			var suv_rim := _make_rim(suv_visual, x, z)
 			suv_rims.append(suv_rim)
+	_make_vehicle_lights(suv_visual)
 	suv_visual.visible = false
 
+
+
+func _make_vehicle_lights(parent: Node3D) -> void:
+	for x in [-0.68, 0.68]:
+		var head := _box(parent, Vector3(0.42, 0.16, 0.06), Vector3(x, 0.12, -1.93), Color(1.0, 0.88, 0.58))
+		var head_material := _mat(Color(1.0, 0.88, 0.58))
+		head_material.emission_enabled = true
+		head_material.emission = Color(1.0, 0.78, 0.38)
+		head_material.emission_energy_multiplier = 0.7
+		head.material_override = head_material
+		var tail := _box(parent, Vector3(0.42, 0.18, 0.07), Vector3(x, 0.12, 1.93), Color(0.42, 0.025, 0.02))
+		var tail_material := _mat(Color(0.42, 0.025, 0.02))
+		tail_material.emission_enabled = true
+		tail_material.emission = Color(0.8, 0.015, 0.01)
+		tail_material.emission_energy_multiplier = 0.35
+		tail.material_override = tail_material
+		brake_lamps.append(tail)
+
+func _update_brake_lights(active: bool) -> void:
+	for lamp in brake_lamps:
+		var material := lamp.material_override as StandardMaterial3D
+		if material:
+			material.emission_energy_multiplier = 2.2 if active else 0.35
 
 func _make_rim(parent: Node3D, side: float, depth: float) -> MeshInstance3D:
 	var rim := MeshInstance3D.new()
@@ -467,6 +494,7 @@ func _physics_process(delta: float) -> void:
 			nitro_energy = maxf(0.0, nitro_energy - delta)
 		elif not nitro_pressed:
 			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
+		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
 		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		speed = move_toward(speed, target_speed, acceleration * delta)
@@ -479,11 +507,14 @@ func _physics_process(delta: float) -> void:
 		car.move_and_slide()
 		status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6) if drift_pressed else "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
+		_update_brake_lights(false)
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
 		player.velocity.x = direction.x * 5.0
 		player.velocity.z = direction.z * 5.0
 		player.velocity.y -= 20.0 * delta
 		player.move_and_slide()
+	var target_fov := camera_base_fov + (clampf(absf(speed) / 24.0, 0.0, 1.0) * 7.0 if driving else 0.0) + (3.0 if driving and nitro_pressed and nitro_energy > 0.0 else 0.0)
+	camera.fov = lerpf(camera.fov, target_fov, 3.0 * delta)
 	var target := car.global_position if driving else player.global_position
 	var follow_offset := car.global_basis.z * 10.0 + Vector3(0, 5.5, 0) if driving else Vector3(0, 7, 11)
 	camera.global_position = camera.global_position.lerp(target + follow_offset, 4.5 * delta)
