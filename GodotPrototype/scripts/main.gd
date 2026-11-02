@@ -318,7 +318,6 @@ func _build_vehicle_audio() -> void:
 	engine_audio.stream = _make_tone_wav(82.0, 0.5, true)
 	engine_audio.volume_db = -19.0
 	add_child(engine_audio)
-	engine_audio.play()
 	horn_audio = AudioStreamPlayer.new()
 	horn_audio.name = "ProceduralHornAudio"
 	horn_audio.stream = _make_tone_wav(440.0, 0.32, false)
@@ -326,6 +325,8 @@ func _build_vehicle_audio() -> void:
 	add_child(horn_audio)
 
 func _press_horn() -> void:
+	if not driving:
+		return
 	horn_pressed = true
 	if horn_audio and not horn_audio.playing:
 		horn_audio.play()
@@ -341,7 +342,7 @@ func _update_wheel_visuals(delta: float) -> void:
 	for index in range(pivots.size()):
 		var pivot := pivots[index]
 		pivot.rotation.x = wheel_roll
-		pivot.rotation.y = steering_visual * 0.42 if index < 2 else 0.0
+		pivot.rotation.y = steering_visual * 0.42 if pivot.position.z < 0.0 else 0.0
 		var spring := sin(wheel_roll * 0.5 + float(index % 2) * PI) * minf(absf(speed) / 30.0, 1.0) * 0.025
 		pivot.position.y = -0.25 + spring
 
@@ -492,9 +493,9 @@ func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var panel := GridContainer.new()
-	panel.columns = 4
+	panel.columns = 3
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_top = -116
+	panel.offset_top = -170
 	panel.offset_bottom = -8
 	panel.offset_left = 8
 	panel.offset_right = -8
@@ -737,12 +738,25 @@ func _cycle_vehicle_model() -> void:
 func _toggle_vehicle() -> void:
 	if driving:
 		driving = false
+		speed = 0.0
+		throttle_input = 0.0
+		steer_input = 0.0
+		steering_visual = 0.0
+		brake_pressed = false
+		nitro_pressed = false
+		drift_pressed = false
+		if engine_audio and engine_audio.playing:
+			engine_audio.stop()
+		if horn_audio and horn_audio.playing:
+			horn_audio.stop()
 		player.global_position = car.global_position + Vector3(2.2, 0.4, 0)
 		player.visible = true
 		status_label.text = "On foot • Walk to the car and tap ENTER"
 	elif player.global_position.distance_to(car.global_position) < 4.0:
 		driving = true
 		player.visible = false
+		if engine_audio and not engine_audio.playing:
+			engine_audio.play()
 		status_label.text = "Driving • Use arrows, ENTER to exit"
 	else:
 		status_label.text = "Move closer to the red car first"
@@ -785,6 +799,8 @@ func _physics_process(delta: float) -> void:
 			nitro_energy = maxf(0.0, nitro_energy - delta)
 		elif not nitro_pressed:
 			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
+		if engine_audio and not engine_audio.playing:
+			engine_audio.play()
 		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
 		_update_wheel_visuals(delta)
 		if engine_audio:
@@ -842,8 +858,10 @@ func _physics_process(delta: float) -> void:
 		else:
 			status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
-		if engine_audio:
-			engine_audio.pitch_scale = move_toward(engine_audio.pitch_scale, 0.72, delta * 0.8)
+		if engine_audio and engine_audio.playing:
+			engine_audio.stop()
+		if horn_audio and horn_audio.playing:
+			horn_audio.stop()
 		_update_turn_signals(delta)
 		_update_brake_lights(false)
 		_update_reverse_lights(false)
