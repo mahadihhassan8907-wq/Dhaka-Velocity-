@@ -457,7 +457,7 @@ func _build_ui() -> void:
 	steering_wheel = VirtualSteeringWheel.new()
 	steering_wheel.name = "VirtualSteeringWheel"
 	steering_wheel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	steering_wheel.position = Vector2(18, -218)
+	steering_wheel.position = Vector2(18, -300)
 	steering_wheel.size = Vector2(184, 184)
 	steering_wheel.steering_changed.connect(_set_wheel_steering)
 	layer.add_child(steering_wheel)
