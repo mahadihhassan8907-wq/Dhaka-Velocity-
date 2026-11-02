@@ -44,6 +44,7 @@ var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
 var brake_lamps: Array[MeshInstance3D] = []
 var camera_base_fov := 70.0
+var drift_intensity := 0.0
 
 func _ready() -> void:
 	_build_city()
@@ -145,9 +146,9 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
-	_make_vehicle_lights(car)
 			var sport_rim := _make_rim(car, x, z)
 			sport_rims.append(sport_rim)
+	_make_vehicle_lights(car)
 	var car_collision := CollisionShape3D.new()
 	var car_shape := BoxShape3D.new()
 	car_shape.size = Vector3(1.85, 0.8, 3.55)
@@ -499,10 +500,11 @@ func _physics_process(delta: float) -> void:
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		speed = move_toward(speed, target_speed, acceleration * delta)
 		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
-		var steering_rate := 1.85 if drift_pressed else 1.35
+		var steering_rate := 1.75 if drift_pressed else 1.25
 		car.rotate_y(-steer_input * steering_strength * delta * steering_rate * signf(speed))
+		drift_intensity = move_toward(drift_intensity, 1.0 if drift_pressed and absf(speed) > 5.0 and absf(steer_input) > 0.1 else 0.0, delta * 2.8)
 		var forward_velocity := -car.global_basis.z * speed
-		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.42 if drift_pressed else Vector3.ZERO
+		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.34 * drift_intensity
 		car.velocity = forward_velocity + drift_slide
 		car.move_and_slide()
 		status_label.text = "DRIFTING  •  %d km/h" % int(absf(speed) * 3.6) if drift_pressed else "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
