@@ -205,9 +205,7 @@ func _build_ui() -> void:
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
-	var paint := _make_button("PAINT", 68)
-	var next_car := _make_button("CAR", 52)
-	for button in [left, forward, back, right, brake, enter, paint, next_car]:
+	for button in [left, forward, back, right, brake, enter]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -220,8 +218,29 @@ func _build_ui() -> void:
 	brake.button_down.connect(func(): brake_pressed = true)
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
+	var garage_panel := VBoxContainer.new()
+	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	garage_panel.position = Vector2(-142, 42)
+	garage_panel.size = Vector2(132, 190)
+	garage_panel.add_theme_constant_override("separation", 5)
+	layer.add_child(garage_panel)
+	var paint := _make_button("PAINT", 128)
+	var next_car := _make_button("NEXT CAR", 128)
+	var silver := _make_button("SILVER", 128)
+	var mix_color := ColorPickerButton.new()
+	mix_color.text = "MIX COLOR"
+	mix_color.custom_minimum_size = Vector2(128, 54)
+	mix_color.color = Color(0.25, 0.55, 0.9)
+	mix_color.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mix_color.add_theme_font_size_override("font_size", 15)
+	garage_panel.add_child(paint)
+	garage_panel.add_child(next_car)
+	garage_panel.add_child(silver)
+	garage_panel.add_child(mix_color)
 	paint.pressed.connect(_cycle_car_paint)
 	next_car.pressed.connect(_cycle_vehicle_model)
+	silver.pressed.connect(_apply_silver_paint)
+	mix_color.color_changed.connect(_apply_custom_car_color)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -285,6 +304,34 @@ func _cycle_car_paint() -> void:
 	suv_paint.material_override = _mat(paint_colors[paint_index])
 	status_label.text = "GARAGE  •  Car color changed to %s" % paint_names[paint_index]
 
+func _apply_custom_car_color(color: Color) -> void:
+	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
+		status_label.text = "Move closer to your car to mix a custom paint color"
+		return
+	var sport_material := _mat(color)
+	sport_material.metallic = 0.72
+	sport_material.roughness = 0.24
+	var suv_material := _mat(color)
+	suv_material.metallic = 0.72
+	suv_material.roughness = 0.24
+	car_paint.material_override = sport_material
+	suv_paint.material_override = suv_material
+	status_label.text = "GARAGE  •  Custom mixed paint applied"
+
+func _apply_silver_paint() -> void:
+	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
+		status_label.text = "Move closer to your car to use the silver finish"
+		return
+	var silver_color := Color(0.72, 0.76, 0.80)
+	var sport_material := _mat(silver_color)
+	sport_material.metallic = 0.92
+	sport_material.roughness = 0.18
+	var suv_material := _mat(silver_color)
+	suv_material.metallic = 0.92
+	suv_material.roughness = 0.18
+	car_paint.material_override = sport_material
+	suv_paint.material_override = suv_material
+	status_label.text = "GARAGE  •  Metallic silver finish applied"
 func _cycle_vehicle_model() -> void:
 	if driving:
 		status_label.text = "Exit the car before switching models"
