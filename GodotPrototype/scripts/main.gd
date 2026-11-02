@@ -7,6 +7,11 @@ var paint_index := 0
 var suv_visual: Node3D
 var suv_paint: MeshInstance3D
 var selected_suv := false
+var sport_rims: Array[MeshInstance3D] = []
+var suv_rims: Array[MeshInstance3D] = []
+var rim_index := 0
+var rim_colors: Array[Color] = [Color(0.78, 0.82, 0.88), Color(0.12, 0.14, 0.18), Color(0.82, 0.48, 0.16), Color(0.25, 0.72, 0.68)]
+var rim_names: Array[String] = ["SILVER", "GRAPHITE", "BRONZE", "TEAL"]
 var current_paint_color := Color(0.88, 0.12, 0.08)
 var finish_index := 1
 var finish_names: Array[String] = ["MATTE", "GLOSS", "METALLIC"]
@@ -127,6 +132,8 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+			var sport_rim := _make_rim(car, x, z)
+			sport_rims.append(sport_rim)
 	var car_collision := CollisionShape3D.new()
 	var car_shape := BoxShape3D.new()
 	car_shape.size = Vector3(1.85, 0.8, 3.55)
@@ -140,8 +147,23 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(suv_visual, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+			var suv_rim := _make_rim(suv_visual, x, z)
+			suv_rims.append(suv_rim)
 	suv_visual.visible = false
 
+
+func _make_rim(parent: Node3D, side: float, depth: float) -> MeshInstance3D:
+	var rim := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = 0.22
+	cylinder.bottom_radius = 0.22
+	cylinder.height = 0.10
+	rim.mesh = cylinder
+	rim.position = Vector3(side * 1.17, -0.25, depth)
+	rim.rotation.z = PI / 2.0
+	rim.material_override = _mat(rim_colors[rim_index])
+	parent.add_child(rim)
+	return rim
 
 func _build_traffic() -> void:
 	for i in range(4):
@@ -224,13 +246,14 @@ func _build_ui() -> void:
 	var garage_panel := VBoxContainer.new()
 	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	garage_panel.position = Vector2(-142, 42)
-	garage_panel.size = Vector2(132, 190)
+	garage_panel.size = Vector2(132, 250)
 	garage_panel.add_theme_constant_override("separation", 5)
 	layer.add_child(garage_panel)
 	var paint := _make_button("PAINT", 128)
 	var next_car := _make_button("NEXT CAR", 128)
 	var silver := _make_button("SILVER", 128)
 	var finish := _make_button("FINISH: GLOSS", 128)
+	var rims := _make_button("RIMS: SILVER", 128)
 	var mix_color := ColorPickerButton.new()
 	mix_color.text = "MIX COLOR"
 	mix_color.custom_minimum_size = Vector2(128, 54)
@@ -242,11 +265,13 @@ func _build_ui() -> void:
 	garage_panel.add_child(silver)
 	garage_panel.add_child(finish)
 	garage_panel.add_child(mix_color)
+	garage_panel.add_child(rims)
 	paint.pressed.connect(_cycle_car_paint)
 	next_car.pressed.connect(_cycle_vehicle_model)
 	silver.pressed.connect(_apply_silver_paint)
 	finish.pressed.connect(_cycle_paint_finish)
 	mix_color.color_changed.connect(_apply_custom_car_color)
+	rims.pressed.connect(_cycle_rim_color)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -342,6 +367,18 @@ func _cycle_paint_finish() -> void:
 	finish_index = (finish_index + 1) % finish_names.size()
 	_refresh_car_paint()
 	status_label.text = "GARAGE  •  %s finish applied" % finish_names[finish_index]
+func _cycle_rim_color() -> void:
+	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
+		status_label.text = "Move closer to your car to customize the rims"
+		return
+	rim_index = (rim_index + 1) % rim_colors.size()
+	for rim in sport_rims + suv_rims:
+		var material := _mat(rim_colors[rim_index])
+		material.metallic = 0.82
+		material.roughness = 0.24
+		rim.material_override = material
+	status_label.text = "GARAGE  •  %s alloy rims fitted" % rim_names[rim_index]
+
 func _cycle_vehicle_model() -> void:
 	if driving:
 		status_label.text = "Exit the car before switching models"
