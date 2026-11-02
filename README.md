@@ -11,6 +11,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Dedicated metallic SILVER finish with reflective material settings
 - Three selectable paint finishes: MATTE, GLOSS and METALLIC; finish changes apply to both vehicles
 - Custom paint and silver finish apply to both selectable garage vehicle models
+- Four selectable alloy-rim finishes: SILVER, GRAPHITE, BRONZE and TEAL, applied to both vehicle models
 - On-foot movement and enter/exit vehicle interaction
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
