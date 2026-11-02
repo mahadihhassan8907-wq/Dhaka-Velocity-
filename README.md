@@ -9,6 +9,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Three-stage City Tour mission: reach FIRST DRIVE, NORTH GATE and WEST AVENUE checkpoints
 - Four-color preset paint cycling plus a full custom color picker for mixing any color
 - Dedicated metallic SILVER finish with reflective material settings
+- Three selectable paint finishes: MATTE, GLOSS and METALLIC; finish changes apply to both vehicles
 - Custom paint and silver finish apply to both selectable garage vehicle models
 - On-foot movement and enter/exit vehicle interaction
 - Four simple moving traffic cars on the main road
