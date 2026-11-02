@@ -30,7 +30,9 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Procedurally synthesized looping engine tone changes pitch with vehicle speed and nitro; a dedicated HORN touch button plays a short generated horn tone without external audio assets
 - Four wheel assemblies visibly rotate with vehicle motion, front wheels steer with the input, and a subtle speed-linked spring motion approximates suspension travel
 - Traffic-aware approach braking and basic impact response against traffic and city obstacles
-- Touch-friendly on-screen directional controls
+- Touch-friendly on-screen driving controls arranged in a three-column layout, including the new HORN button
+- Vehicle engine audio now runs only while driving; horn input is ignored while on foot
+- Wheel steering is applied to the front axle only, and exiting a vehicle resets throttle, steering, brake, drift and nitro inputs safely
 - Basic follow camera, lighting, and collision for the ground, buildings and player vehicle
 
 ## Project location
