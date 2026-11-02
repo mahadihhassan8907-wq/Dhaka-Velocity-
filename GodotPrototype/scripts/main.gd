@@ -5,6 +5,8 @@ var car: CharacterBody3D
 var camera: Camera3D
 var driving := false
 var move_dir := Vector2.ZERO
+var steer_input := 0.0
+var throttle_input := 0.0
 var speed := 0.0
 var status_label: Label
 var traffic_cars: Array[Node3D] = []
@@ -102,6 +104,11 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+	var car_collision := CollisionShape3D.new()
+	var car_shape := BoxShape3D.new()
+	car_shape.size = Vector3(1.85, 0.8, 3.55)
+	car_collision.shape = car_shape
+	car.add_child(car_collision)
 
 
 func _build_traffic() -> void:
@@ -140,14 +147,14 @@ func _build_ui() -> void:
 	var enter := _make_button("ENTER", 88)
 	for button in [left, forward, back, right, enter]:
 		panel.add_child(button)
-	left.button_down.connect(func(): _set_move(Vector2(-1, move_dir.y)))
-	left.button_up.connect(func(): _set_move(Vector2(0, move_dir.y)))
-	right.button_down.connect(func(): _set_move(Vector2(1, move_dir.y)))
-	right.button_up.connect(func(): _set_move(Vector2(0, move_dir.y)))
-	forward.button_down.connect(func(): _set_move(Vector2(move_dir.x, -1)))
-	forward.button_up.connect(func(): _set_move(Vector2(move_dir.x, 0)))
-	back.button_down.connect(func(): _set_move(Vector2(move_dir.x, 1)))
-	back.button_up.connect(func(): _set_move(Vector2(move_dir.x, 0)))
+	left.button_down.connect(_press_left)
+	left.button_up.connect(_release_left)
+	right.button_down.connect(_press_right)
+	right.button_up.connect(_release_right)
+	forward.button_down.connect(_press_forward)
+	forward.button_up.connect(_release_forward)
+	back.button_down.connect(_press_reverse)
+	back.button_up.connect(_release_reverse)
 	enter.pressed.connect(_toggle_vehicle)
 	status_label = Label.new()
 	status_label.text = "DHAKA VELOCITY  •  Walk to the red car and tap ENTER"
@@ -165,6 +172,38 @@ func _make_button(caption: String, button_width: float) -> Button:
 
 func _set_move(value: Vector2) -> void:
 	move_dir = value.normalized()
+
+func _press_left() -> void:
+	steer_input = -1.0
+	_set_move(Vector2(-1, move_dir.y))
+
+func _release_left() -> void:
+	steer_input = 0.0
+	_set_move(Vector2(0, move_dir.y))
+
+func _press_right() -> void:
+	steer_input = 1.0
+	_set_move(Vector2(1, move_dir.y))
+
+func _release_right() -> void:
+	steer_input = 0.0
+	_set_move(Vector2(0, move_dir.y))
+
+func _press_forward() -> void:
+	throttle_input = 1.0
+	_set_move(Vector2(move_dir.x, -1))
+
+func _release_forward() -> void:
+	throttle_input = 0.0
+	_set_move(Vector2(move_dir.x, 0))
+
+func _press_reverse() -> void:
+	throttle_input = -1.0
+	_set_move(Vector2(move_dir.x, 1))
+
+func _release_reverse() -> void:
+	throttle_input = 0.0
+	_set_move(Vector2(move_dir.x, 0))
 
 func _toggle_vehicle() -> void:
 	if driving:
@@ -190,9 +229,11 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if driving:
-		var throttle := -move_dir.y
-		speed = move_toward(speed, throttle * 14.0, 18.0 * delta)
-		car.rotate_y(-move_dir.x * delta * 1.8)
+		var target_speed := throttle_input * 16.0
+		var acceleration := 10.0 if throttle_input != 0.0 else 15.0
+		speed = move_toward(speed, target_speed, acceleration * delta)
+		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
+		car.rotate_y(-steer_input * steering_strength * delta * 1.35 * signf(speed))
 		car.velocity = -car.global_basis.z * speed
 		car.move_and_slide()
 	else:
@@ -202,5 +243,6 @@ func _physics_process(delta: float) -> void:
 		player.velocity.y -= 20.0 * delta
 		player.move_and_slide()
 	var target := car.global_position if driving else player.global_position
-	camera.global_position = camera.global_position.lerp(target + Vector3(0, 7, 11), 5.0 * delta)
+	var follow_offset := car.global_basis.z * 10.0 + Vector3(0, 5.5, 0) if driving else Vector3(0, 7, 11)
+	camera.global_position = camera.global_position.lerp(target + follow_offset, 4.5 * delta)
 	camera.look_at(target + Vector3(0, 1, 0), Vector3.UP)
