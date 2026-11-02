@@ -1,5 +1,51 @@
 extends Node3D
 
+class VirtualSteeringWheel extends Control:
+	signal steering_changed(value: float)
+	var steering_value := 0.0
+	var dragging := false
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		queue_redraw()
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch:
+			dragging = event.pressed
+			if dragging:
+				_update_steering(event.position.x)
+			else:
+				accept_event()
+		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			dragging = event.pressed
+			if dragging:
+				_update_steering(event.position.x)
+		elif event is InputEventScreenDrag or (event is InputEventMouseMotion and dragging):
+			_update_steering(event.position.x)
+
+	func _update_steering(pointer_x: float) -> void:
+		steering_value = clampf((pointer_x / maxf(size.x, 1.0) - 0.5) * 2.0, -1.0, 1.0)
+		steering_changed.emit(steering_value)
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		if not dragging and absf(steering_value) > 0.01:
+			steering_value = move_toward(steering_value, 0.0, delta * 2.8)
+			steering_changed.emit(steering_value)
+			queue_redraw()
+
+	func _draw() -> void:
+		var center := size * 0.5
+		var radius := minf(size.x, size.y) * 0.43
+		draw_circle(center, radius, Color(0.035, 0.045, 0.06, 0.78))
+		draw_arc(center, radius, 0.0, TAU, 64, Color(0.82, 0.86, 0.92), 7.0, true)
+		draw_set_transform(center, steering_value * 0.85, Vector2.ONE)
+		draw_line(Vector2(0, -radius * 0.88), Vector2.ZERO, Color(0.9, 0.92, 0.96), 8.0, true)
+		draw_line(Vector2(-radius * 0.78, radius * 0.35), Vector2.ZERO, Color(0.9, 0.92, 0.96), 8.0, true)
+		draw_line(Vector2(radius * 0.78, radius * 0.35), Vector2.ZERO, Color(0.9, 0.92, 0.96), 8.0, true)
+		draw_circle(Vector2.ZERO, radius * 0.16, Color(0.16, 0.2, 0.26))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
 var player: CharacterBody3D
 var car: CharacterBody3D
 var car_paint: MeshInstance3D
@@ -53,6 +99,10 @@ var collision_feedback_timer := 0.0
 var steering_visual := 0.0
 var turn_signal_lamps: Array[MeshInstance3D] = []
 var signal_blink_timer := 0.0
+var steering_mode := 0 # 0 = buttons, 1 = virtual wheel
+var steering_wheel: VirtualSteeringWheel
+var steering_buttons: Array[Button] = []
+var steering_mode_button: Button
 
 func _ready() -> void:
 	_build_city()
@@ -362,9 +412,12 @@ func _build_ui() -> void:
 	var garage_panel := VBoxContainer.new()
 	garage_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	garage_panel.position = Vector2(-142, 42)
-	garage_panel.size = Vector2(132, 250)
+	garage_panel.size = Vector2(148, 310)
 	garage_panel.add_theme_constant_override("separation", 5)
 	layer.add_child(garage_panel)
+	steering_mode_button = _make_button("STEER: BUTTONS", 140)
+	garage_panel.add_child(steering_mode_button)
+	steering_mode_button.pressed.connect(_toggle_steering_mode)
 	var paint := _make_button("PAINT", 128)
 	var next_car := _make_button("NEXT CAR", 128)
 	var silver := _make_button("SILVER", 128)
@@ -394,6 +447,14 @@ func _build_ui() -> void:
 	rims.pressed.connect(_cycle_rim_color)
 	spoiler.pressed.connect(_toggle_spoiler)
 	lights.pressed.connect(_toggle_headlights)
+	steering_wheel = VirtualSteeringWheel.new()
+	steering_wheel.name = "VirtualSteeringWheel"
+	steering_wheel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	steering_wheel.position = Vector2(18, -218)
+	steering_wheel.size = Vector2(184, 184)
+	steering_wheel.steering_changed.connect(_set_wheel_steering)
+	layer.add_child(steering_wheel)
+	steering_wheel.visible = false
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -404,6 +465,21 @@ func _build_ui() -> void:
 	status_label.position = Vector2(12, 12)
 	status_label.add_theme_font_size_override("font_size", 17)
 	layer.add_child(status_label)
+
+func _toggle_steering_mode() -> void:
+	steering_mode = 1 - steering_mode
+	var use_wheel := steering_mode == 1
+	for button in steering_buttons:
+		button.visible = not use_wheel
+	steering_wheel.visible = use_wheel
+	steering_mode_button.text = "STEER: WHEEL" if use_wheel else "STEER: BUTTONS"
+	steer_input = 0.0
+	steering_visual = 0.0
+	status_label.text = "Steering mode: %s" % ("Virtual wheel" if use_wheel else "Left/right buttons")
+
+func _set_wheel_steering(value: float) -> void:
+	if steering_mode == 1:
+		steer_input = value
 
 func _make_button(caption: String, button_width: float) -> Button:
 	var button := Button.new()
