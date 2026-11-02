@@ -45,6 +45,7 @@ var traffic_cars: Array[Node3D] = []
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
+var headlamp_meshes: Array[MeshInstance3D] = []
 var headlights_enabled := true
 var camera_base_fov := 70.0
 var drift_intensity := 0.0
@@ -182,6 +183,7 @@ func _make_vehicle_lights(parent: Node3D) -> void:
 		head_material.emission = Color(1.0, 0.78, 0.38)
 		head_material.emission_energy_multiplier = 0.7
 		head.material_override = head_material
+		headlamp_meshes.append(head)
 		var headlight := SpotLight3D.new()
 		headlight.position = Vector3(x * 0.72, 0.16, -1.72)
 		headlight.light_color = Color(1.0, 0.86, 0.62)
@@ -210,12 +212,17 @@ func _update_reverse_lights(active: bool) -> void:
 	for lamp in reverse_lamps:
 		var material := lamp.material_override as StandardMaterial3D
 		if material:
+			material.albedo_color = Color(0.8, 0.82, 0.78) if active else Color(0.16, 0.17, 0.18)
 			material.emission_energy_multiplier = 1.5 if active else 0.0
 
 func _toggle_headlights() -> void:
 	headlights_enabled = not headlights_enabled
 	for light in headlight_nodes:
 		light.visible = headlights_enabled
+	for lamp in headlamp_meshes:
+		var material := lamp.material_override as StandardMaterial3D
+		if material:
+			material.emission_energy_multiplier = 0.7 if headlights_enabled else 0.0
 	status_label.text = "LIGHTS  •  %s" % ("ON" if headlights_enabled else "OFF")
 
 func _update_brake_lights(active: bool) -> void:
