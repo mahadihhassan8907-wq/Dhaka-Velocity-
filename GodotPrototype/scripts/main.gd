@@ -5,7 +5,6 @@ var car: CharacterBody3D
 var camera: Camera3D
 var driving := false
 var move_dir := Vector2.ZERO
-var drive_dir := Vector2.ZERO
 var speed := 0.0
 var status_label: Label
 
@@ -17,9 +16,9 @@ func _ready() -> void:
 	_build_ui()
 
 func _mat(color: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	return m
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	return material
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
@@ -31,53 +30,76 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInst
 	parent.add_child(node)
 	return node
 
+func _solid_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
+	var body := StaticBody3D.new()
+	body.position = pos
+	parent.add_child(body)
+	_box(body, size, Vector3.ZERO, color)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+
 func _build_city() -> void:
-	_box(self, Vector3(100, 0.3, 100), Vector3(0, -0.2, 0), Color(0.20, 0.42, 0.25))
-	_box(self, Vector3(12, 0.08, 100), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
-	_box(self, Vector3(100, 0.08, 12), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
+	_solid_box(self, Vector3(100, 0.3, 100), Vector3(0, -0.2, 0), Color(0.20, 0.42, 0.25))
+	_solid_box(self, Vector3(12, 0.08, 100), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
+	_solid_box(self, Vector3(100, 0.08, 12), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
 	for x in [-28, -16, 16, 28]:
 		for z in [-28, -16, 16, 28]:
-			var h := 5.0 + float(abs(x + z) % 9)
-			_box(self, Vector3(8, h, 8), Vector3(x, h / 2.0, z), Color(0.42, 0.48, 0.55))
-			_box(self, Vector3(8.2, 0.35, 8.2), Vector3(x, h + 0.12, z), Color(0.20, 0.28, 0.36))
+			var height := 5.0 + float(abs(x + z) % 9)
+			_solid_box(self, Vector3(8, height, 8), Vector3(x, height / 2.0, z), Color(0.42, 0.48, 0.55))
+			_box(self, Vector3(8.2, 0.35, 8.2), Vector3(x, height + 0.12, z), Color(0.20, 0.28, 0.36))
 	_box(self, Vector3(1, 0.03, 90), Vector3(-3, 0.06, 0), Color(0.9, 0.82, 0.25))
 	_box(self, Vector3(1, 0.03, 90), Vector3(3, 0.06, 0), Color(0.9, 0.82, 0.25))
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-55, -30, 0)
+	sun.light_energy = 1.2
+	add_child(sun)
+	var environment := WorldEnvironment.new()
+	var world := Environment.new()
+	world.background_mode = Environment.BG_SKY
+	world.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	world.ambient_light_color = Color(0.55, 0.62, 0.72)
+	world.ambient_light_energy = 0.65
+	environment.environment = world
+	add_child(environment)
 
 func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
 	player.position = Vector3(-5, 1, 5)
 	add_child(player)
-	var body := CapsuleMesh.new()
-	body.radius = 0.42
-	body.height = 1.8
+	var capsule_mesh := CapsuleMesh.new()
+	capsule_mesh.radius = 0.42
+	capsule_mesh.height = 1.8
 	var visual := MeshInstance3D.new()
-	visual.mesh = body
+	visual.mesh = capsule_mesh
 	visual.material_override = _mat(Color(0.12, 0.55, 0.95))
 	player.add_child(visual)
-	var shape := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.42
-	capsule.height = 1.8
-	shape.shape = capsule
-	player.add_child(shape)
+	var collision := CollisionShape3D.new()
+	var capsule_shape := CapsuleShape3D.new()
+	capsule_shape.radius = 0.42
+	capsule_shape.height = 1.8
+	collision.shape = capsule_shape
+	player.add_child(collision)
 
 func _build_car() -> void:
 	car = CharacterBody3D.new()
 	car.name = "Velocity"
 	car.position = Vector3(0, 0.75, 5)
 	add_child(car)
-	_box(car, Vector3(2.0, 0.7, 3.8), Vector3(0, 0, 0), Color(0.88, 0.12, 0.08))
+	_box(car, Vector3(2.0, 0.7, 3.8), Vector3.ZERO, Color(0.88, 0.12, 0.08))
 	_box(car, Vector3(1.55, 0.65, 1.7), Vector3(0, 0.62, -0.25), Color(0.12, 0.22, 0.30))
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
-			var wheel := _box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
-			wheel.rotation.z = PI / 2.0
+			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
 
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.position = Vector3(0, 7, 11)
 	camera.current = true
+	camera.fov = 70
 	add_child(camera)
 
 func _build_ui() -> void:
@@ -85,19 +107,19 @@ func _build_ui() -> void:
 	add_child(layer)
 	var panel := HBoxContainer.new()
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_top = -90
-	panel.offset_bottom = -12
-	panel.offset_left = 12
-	panel.offset_right = -12
-	panel.add_theme_constant_override("separation", 12)
+	panel.offset_top = -82
+	panel.offset_bottom = -8
+	panel.offset_left = 8
+	panel.offset_right = -8
+	panel.add_theme_constant_override("separation", 5)
 	layer.add_child(panel)
-	var left := _make_button("◀")
-	var forward := _make_button("▲")
-	var back := _make_button("▼")
-	var right := _make_button("▶")
-	var enter := _make_button("ENTER / EXIT")
-	for b in [left, forward, back, right, enter]:
-		panel.add_child(b)
+	var left := _make_button("◀", 52)
+	var forward := _make_button("▲", 52)
+	var back := _make_button("▼", 52)
+	var right := _make_button("▶", 52)
+	var enter := _make_button("ENTER", 88)
+	for button in [left, forward, back, right, enter]:
+		panel.add_child(button)
 	left.button_down.connect(func(): _set_move(Vector2(-1, move_dir.y)))
 	left.button_up.connect(func(): _set_move(Vector2(0, move_dir.y)))
 	right.button_down.connect(func(): _set_move(Vector2(1, move_dir.y)))
@@ -109,19 +131,20 @@ func _build_ui() -> void:
 	enter.pressed.connect(_toggle_vehicle)
 	status_label = Label.new()
 	status_label.text = "DHAKA VELOCITY  •  Walk to the red car and tap ENTER"
-	status_label.position = Vector2(18, 18)
-	status_label.add_theme_font_size_override("font_size", 20)
+	status_label.position = Vector2(12, 12)
+	status_label.add_theme_font_size_override("font_size", 17)
 	layer.add_child(status_label)
 
-func _make_button(caption: String) -> Button:
-	var b := Button.new()
-	b.text = caption
-	b.custom_minimum_size = Vector2(90, 62)
-	b.add_theme_font_size_override("font_size", 18)
-	return b
+func _make_button(caption: String, button_width: float) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.custom_minimum_size = Vector2(button_width, 58)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 17)
+	return button
 
-func _set_move(v: Vector2) -> void:
-	move_dir = v.normalized()
+func _set_move(value: Vector2) -> void:
+	move_dir = value.normalized()
 
 func _toggle_vehicle() -> void:
 	if driving:
@@ -150,6 +173,5 @@ func _physics_process(delta: float) -> void:
 		player.velocity.y -= 20.0 * delta
 		player.move_and_slide()
 	var target := car.global_position if driving else player.global_position
-	var desired := target + Vector3(0, 7, 11)
-	camera.global_position = camera.global_position.lerp(desired, 5.0 * delta)
+	camera.global_position = camera.global_position.lerp(target + Vector3(0, 7, 11), 5.0 * delta)
 	camera.look_at(target + Vector3(0, 1, 0), Vector3.UP)
