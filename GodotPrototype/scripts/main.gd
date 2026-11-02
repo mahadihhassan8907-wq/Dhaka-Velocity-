@@ -10,6 +10,9 @@ var throttle_input := 0.0
 var brake_pressed := false
 var speed := 0.0
 var status_label: Label
+var mission_label: Label
+var checkpoint: Node3D
+var mission_complete := false
 var traffic_cars: Array[Node3D] = []
 
 func _ready() -> void:
@@ -17,6 +20,7 @@ func _ready() -> void:
 	_build_player()
 	_build_car()
 	_build_traffic()
+	_build_checkpoint()
 	_build_camera()
 	_build_ui()
 
@@ -123,6 +127,36 @@ func _build_traffic() -> void:
 		_box(traffic, Vector3(1.25, 0.48, 1.35), Vector3(0, 0.5, -0.15), Color(0.12, 0.20, 0.28))
 		traffic_cars.append(traffic)
 
+
+func _build_checkpoint() -> void:
+	checkpoint = Node3D.new()
+	checkpoint.name = "FirstMissionCheckpoint"
+	checkpoint.position = Vector3(0, 0.18, -39)
+	add_child(checkpoint)
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.12
+	torus.outer_radius = 1.7
+	ring.mesh = torus
+	ring.material_override = _mat(Color(0.12, 0.95, 0.72))
+	ring.rotation_degrees.x = 90
+	checkpoint.add_child(ring)
+	var beacon := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = 0.08
+	cylinder.bottom_radius = 0.08
+	cylinder.height = 3.0
+	beacon.mesh = cylinder
+	beacon.position.y = 1.5
+	beacon.material_override = _mat(Color(0.12, 0.95, 0.72, 0.35))
+	checkpoint.add_child(beacon)
+	var tag := Label3D.new()
+	tag.text = "FIRST DRIVE"
+	tag.position = Vector3(0, 3.2, 0)
+	tag.font_size = 32
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	checkpoint.add_child(tag)
+
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.position = Vector3(0, 7, 11)
@@ -160,6 +194,11 @@ func _build_ui() -> void:
 	brake.button_down.connect(func(): brake_pressed = true)
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
+	mission_label = Label.new()
+	mission_label.text = "MISSION 01  •  Drive to the glowing checkpoint"
+	mission_label.position = Vector2(12, 38)
+	mission_label.add_theme_font_size_override("font_size", 16)
+	layer.add_child(mission_label)
 	status_label = Label.new()
 	status_label.text = "DHAKA VELOCITY  •  Walk to the red car and tap ENTER"
 	status_label.position = Vector2(12, 12)
@@ -223,6 +262,15 @@ func _toggle_vehicle() -> void:
 		status_label.text = "Move closer to the red car first"
 
 func _process(delta: float) -> void:
+	if not mission_complete:
+		var actor_position := car.global_position if driving else player.global_position
+		if actor_position.distance_to(checkpoint.global_position) < 3.2:
+			mission_complete = true
+			mission_label.text = "MISSION COMPLETE  •  First Drive finished!"
+			status_label.text = "Great driving! First mission complete."
+			checkpoint.visible = false
+		else:
+			checkpoint.rotate_y(delta * 0.8)
 	for i in range(traffic_cars.size()):
 		var traffic := traffic_cars[i]
 		traffic.position.z += (5.0 + float(i % 2) * 1.5) * delta * (1.0 if i % 2 == 0 else -1.0)
