@@ -51,6 +51,8 @@ var camera_base_fov := 70.0
 var drift_intensity := 0.0
 var collision_feedback_timer := 0.0
 var steering_visual := 0.0
+var turn_signal_lamps: Array[MeshInstance3D] = []
+var signal_blink_timer := 0.0
 
 func _ready() -> void:
 	_build_city()
@@ -207,6 +209,14 @@ func _make_vehicle_lights(parent: Node3D) -> void:
 		tail_material.emission_energy_multiplier = 0.35
 		tail.material_override = tail_material
 		brake_lamps.append(tail)
+		for lamp_z in [-1.94, 1.94]:
+			var indicator := _box(parent, Vector3(0.14, 0.12, 0.07), Vector3(x * 0.78, 0.12, lamp_z), Color(0.95, 0.42, 0.04))
+			var indicator_material := _mat(Color(0.95, 0.42, 0.04))
+			indicator_material.emission_enabled = true
+			indicator_material.emission = Color(1.0, 0.32, 0.015)
+			indicator_material.emission_energy_multiplier = 0.0
+			indicator.material_override = indicator_material
+			turn_signal_lamps.append(indicator)
 
 func _update_reverse_lights(active: bool) -> void:
 	for lamp in reverse_lamps:
@@ -224,6 +234,18 @@ func _toggle_headlights() -> void:
 		if material:
 			material.emission_energy_multiplier = 0.7 if headlights_enabled else 0.0
 	status_label.text = "LIGHTS  •  %s" % ("ON" if headlights_enabled else "OFF")
+
+func _update_turn_signals(delta: float) -> void:
+	signal_blink_timer += delta
+	var steering_active := absf(steer_input) > 0.25 and absf(speed) > 1.0
+	var blink_on := fposmod(signal_blink_timer, 0.8) < 0.4
+	for index in range(turn_signal_lamps.size()):
+		var lamp := turn_signal_lamps[index]
+		var is_left_side := lamp.position.x < 0.0
+		var selected_side := (steer_input < -0.25 and is_left_side) or (steer_input > 0.25 and not is_left_side)
+		var material := lamp.material_override as StandardMaterial3D
+		if material:
+			material.emission_energy_multiplier = 2.0 if steering_active and selected_side and blink_on else 0.0
 
 func _update_brake_lights(active: bool) -> void:
 	for lamp in brake_lamps:
@@ -551,6 +573,7 @@ func _physics_process(delta: float) -> void:
 		elif not nitro_pressed:
 			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
 		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
+		_update_turn_signals(delta)
 		_update_reverse_lights(throttle_input < 0.0 and absf(speed) < 5.0)
 		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
@@ -603,6 +626,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
+		_update_turn_signals(delta)
 		_update_brake_lights(false)
 		_update_reverse_lights(false)
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
