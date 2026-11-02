@@ -19,7 +19,8 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
 - Separate GO, REV and BRAKE touch controls with live speed display
-- Selectable steering modes: left/right touch buttons or a draggable, self-centering virtual steering wheel
+- Selectable steering modes: left/right touch buttons or a draggable, self-centering virtual steering wheel; the selected mode hides the unused steering controls
+- Scrollable compact garage controls for smaller mobile screens
 - Steering input now eases smoothly instead of snapping instantly
 - Nearby traffic triggers a slowdown and a short traffic-alert message
 - Steering response scales with vehicle speed; the follow camera smoothly widens its field of view as speed and nitro rise
