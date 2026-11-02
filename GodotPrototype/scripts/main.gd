@@ -4,6 +4,9 @@ var player: CharacterBody3D
 var car: CharacterBody3D
 var car_paint: MeshInstance3D
 var paint_index := 0
+var suv_visual: Node3D
+var suv_paint: MeshInstance3D
+var selected_suv := false
 var paint_colors: Array[Color] = [Color(0.88, 0.12, 0.08), Color(0.08, 0.32, 0.92), Color(0.95, 0.68, 0.08), Color(0.08, 0.62, 0.34)]
 var paint_names: Array[String] = ["RED", "BLUE", "GOLD", "GREEN"]
 var camera: Camera3D
@@ -126,6 +129,15 @@ func _build_car() -> void:
 	car_shape.size = Vector3(1.85, 0.8, 3.55)
 	car_collision.shape = car_shape
 	car.add_child(car_collision)
+	suv_visual = Node3D.new()
+	suv_visual.name = "MetroSUV"
+	car.add_child(suv_visual)
+	suv_paint = _box(suv_visual, Vector3(2.0, 0.95, 3.8), Vector3(0, 0.12, 0), paint_colors[paint_index])
+	_box(suv_visual, Vector3(1.7, 0.82, 2.15), Vector3(0, 0.92, -0.15), Color(0.10, 0.20, 0.28))
+	for x in [-1.02, 1.02]:
+		for z in [-1.2, 1.2]:
+			_box(suv_visual, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+	suv_visual.visible = false
 
 
 func _build_traffic() -> void:
@@ -194,7 +206,8 @@ func _build_ui() -> void:
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
 	var paint := _make_button("PAINT", 68)
-	for button in [left, forward, back, right, brake, enter, paint]:
+	var next_car := _make_button("CAR", 52)
+	for button in [left, forward, back, right, brake, enter, paint, next_car]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -208,6 +221,7 @@ func _build_ui() -> void:
 	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
 	paint.pressed.connect(_cycle_car_paint)
+	next_car.pressed.connect(_cycle_vehicle_model)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -268,7 +282,20 @@ func _cycle_car_paint() -> void:
 		return
 	paint_index = (paint_index + 1) % paint_colors.size()
 	car_paint.material_override = _mat(paint_colors[paint_index])
+	suv_paint.material_override = _mat(paint_colors[paint_index])
 	status_label.text = "GARAGE  •  Car color changed to %s" % paint_names[paint_index]
+
+func _cycle_vehicle_model() -> void:
+	if driving:
+		status_label.text = "Exit the car before switching models"
+		return
+	if player.global_position.distance_to(car.global_position) > 6.5:
+		status_label.text = "Move closer to the garage to switch vehicles"
+		return
+	selected_suv = not selected_suv
+	suv_visual.visible = selected_suv
+	car_paint.visible = not selected_suv
+	status_label.text = "GARAGE  •  Selected %s" % ("CITY SUV" if selected_suv else "VELOCITY SPORT")
 
 func _toggle_vehicle() -> void:
 	if driving:
