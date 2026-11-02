@@ -43,6 +43,9 @@ var mission_points: Array[Vector3] = [
 var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
 var brake_lamps: Array[MeshInstance3D] = []
+var reverse_lamps: Array[MeshInstance3D] = []
+var headlight_nodes: Array[SpotLight3D] = []
+var headlights_enabled := true
 var camera_base_fov := 70.0
 var drift_intensity := 0.0
 var collision_feedback_timer := 0.0
@@ -179,6 +182,22 @@ func _make_vehicle_lights(parent: Node3D) -> void:
 		head_material.emission = Color(1.0, 0.78, 0.38)
 		head_material.emission_energy_multiplier = 0.7
 		head.material_override = head_material
+		var headlight := SpotLight3D.new()
+		headlight.position = Vector3(x * 0.72, 0.16, -1.72)
+		headlight.light_color = Color(1.0, 0.86, 0.62)
+		headlight.light_energy = 2.2
+		headlight.spot_range = 24.0
+		headlight.spot_angle = 34.0
+		headlight.shadow_enabled = false
+		parent.add_child(headlight)
+		headlight_nodes.append(headlight)
+		var reverse_lamp := _box(parent, Vector3(0.22, 0.12, 0.06), Vector3(x, 0.12, 1.94), Color(0.8, 0.82, 0.78))
+		var reverse_material := _mat(Color(0.8, 0.82, 0.78))
+		reverse_material.emission_enabled = true
+		reverse_material.emission = Color(0.8, 0.82, 0.78)
+		reverse_material.emission_energy_multiplier = 0.0
+		reverse_lamp.material_override = reverse_material
+		reverse_lamps.append(reverse_lamp)
 		var tail := _box(parent, Vector3(0.42, 0.18, 0.07), Vector3(x, 0.12, 1.93), Color(0.42, 0.025, 0.02))
 		var tail_material := _mat(Color(0.42, 0.025, 0.02))
 		tail_material.emission_enabled = true
@@ -186,6 +205,18 @@ func _make_vehicle_lights(parent: Node3D) -> void:
 		tail_material.emission_energy_multiplier = 0.35
 		tail.material_override = tail_material
 		brake_lamps.append(tail)
+
+func _update_reverse_lights(active: bool) -> void:
+	for lamp in reverse_lamps:
+		var material := lamp.material_override as StandardMaterial3D
+		if material:
+			material.emission_energy_multiplier = 1.5 if active else 0.0
+
+func _toggle_headlights() -> void:
+	headlights_enabled = not headlights_enabled
+	for light in headlight_nodes:
+		light.visible = headlights_enabled
+	status_label.text = "LIGHTS  •  %s" % ("ON" if headlights_enabled else "OFF")
 
 func _update_brake_lights(active: bool) -> void:
 	for lamp in brake_lamps:
@@ -208,12 +239,17 @@ func _make_rim(parent: Node3D, side: float, depth: float) -> MeshInstance3D:
 
 func _build_traffic() -> void:
 	for i in range(4):
-		var traffic := Node3D.new()
+		var traffic := AnimatableBody3D.new()
 		traffic.name = "Traffic_%d" % i
 		traffic.position = Vector3(-2.0 if i % 2 == 0 else 2.0, 0.55, -30.0 + float(i) * 18.0)
 		add_child(traffic)
 		var paint := [Color(0.12, 0.42, 0.82), Color(0.82, 0.72, 0.18), Color(0.82, 0.82, 0.78), Color(0.16, 0.58, 0.38)][i]
 		_box(traffic, Vector3(1.65, 0.62, 3.0), Vector3.ZERO, paint)
+		var traffic_collision := CollisionShape3D.new()
+		var traffic_shape := BoxShape3D.new()
+		traffic_shape.size = Vector3(1.7, 0.8, 3.1)
+		traffic_collision.shape = traffic_shape
+		traffic.add_child(traffic_collision)
 		_box(traffic, Vector3(1.25, 0.48, 1.35), Vector3(0, 0.5, -0.15), Color(0.12, 0.20, 0.28))
 		traffic_cars.append(traffic)
 
@@ -306,6 +342,7 @@ func _build_ui() -> void:
 	var finish := _make_button("FINISH: GLOSS", 128)
 	var rims := _make_button("RIMS: SILVER", 128)
 	var spoiler := _make_button("SPOILER: ON", 128)
+	var lights := _make_button("LIGHTS: ON", 128)
 	var mix_color := ColorPickerButton.new()
 	mix_color.text = "MIX COLOR"
 	mix_color.custom_minimum_size = Vector2(128, 54)
@@ -319,6 +356,7 @@ func _build_ui() -> void:
 	garage_panel.add_child(mix_color)
 	garage_panel.add_child(rims)
 	garage_panel.add_child(spoiler)
+	garage_panel.add_child(lights)
 	paint.pressed.connect(_cycle_car_paint)
 	next_car.pressed.connect(_cycle_vehicle_model)
 	silver.pressed.connect(_apply_silver_paint)
@@ -326,6 +364,7 @@ func _build_ui() -> void:
 	mix_color.color_changed.connect(_apply_custom_car_color)
 	rims.pressed.connect(_cycle_rim_color)
 	spoiler.pressed.connect(_toggle_spoiler)
+	lights.pressed.connect(_toggle_headlights)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
 	mission_label.position = Vector2(12, 38)
@@ -502,6 +541,7 @@ func _physics_process(delta: float) -> void:
 		elif not nitro_pressed:
 			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
 		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
+		_update_reverse_lights(throttle_input < 0.0 and absf(speed) < 5.0)
 		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
 		var acceleration := 28.0 if brake_pressed else (16.0 if using_nitro else 10.0) if throttle_input != 0.0 else 15.0
 		var traffic_blocked := false
@@ -526,6 +566,13 @@ func _physics_process(delta: float) -> void:
 		var drift_slide := car.global_basis.x * steer_input * absf(speed) * 0.34 * drift_intensity
 		car.velocity = forward_velocity + drift_slide
 		car.move_and_slide()
+		for collision_index in range(car.get_slide_collision_count()):
+			var hit := car.get_slide_collision(collision_index)
+			if hit.get_collider() is AnimatableBody3D and String(hit.get_collider().name).begins_with("Traffic_"):
+				speed *= 0.35
+				car.velocity = hit.get_normal() * 3.0
+				collision_feedback_timer = 1.0
+				break
 		if collision_feedback_timer > 0.0:
 			status_label.text = "TRAFFIC ALERT  •  Slow down!"
 		elif drift_pressed:
@@ -534,6 +581,7 @@ func _physics_process(delta: float) -> void:
 			status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
 		_update_brake_lights(false)
+		_update_reverse_lights(false)
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
 		player.velocity.x = direction.x * 5.0
 		player.velocity.z = direction.z * 5.0
