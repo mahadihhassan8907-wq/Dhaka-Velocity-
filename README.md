@@ -27,6 +27,8 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Steering response scales with vehicle speed; the follow camera smoothly widens its field of view as speed and nitro rise
 - Functional toggleable headlights with forward spotlights on both vehicles
 - Brake lamps, reverse lamps and animated left/right turn indicators respond to braking, reversing and steering
+- Procedurally synthesized looping engine tone changes pitch with vehicle speed and nitro; a dedicated HORN touch button plays a short generated horn tone without external audio assets
+- Four wheel assemblies visibly rotate with vehicle motion, front wheels steer with the input, and a subtle speed-linked spring motion approximates suspension travel
 - Traffic-aware approach braking and basic impact response against traffic and city obstacles
 - Touch-friendly on-screen directional controls
 - Basic follow camera, lighting, and collision for the ground, buildings and player vehicle
