@@ -7,6 +7,7 @@ var driving := false
 var move_dir := Vector2.ZERO
 var steer_input := 0.0
 var throttle_input := 0.0
+var brake_pressed := false
 var speed := 0.0
 var status_label: Label
 var traffic_cars: Array[Node3D] = []
@@ -144,8 +145,9 @@ func _build_ui() -> void:
 	var forward := _make_button("▲", 52)
 	var back := _make_button("▼", 52)
 	var right := _make_button("▶", 52)
-	var enter := _make_button("ENTER", 88)
-	for button in [left, forward, back, right, enter]:
+	var brake := _make_button("BRAKE", 64)
+	var enter := _make_button("ENTER", 72)
+	for button in [left, forward, back, right, brake, enter]:
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
@@ -155,6 +157,8 @@ func _build_ui() -> void:
 	forward.button_up.connect(_release_forward)
 	back.button_down.connect(_press_reverse)
 	back.button_up.connect(_release_reverse)
+	brake.button_down.connect(func(): brake_pressed = true)
+	brake.button_up.connect(func(): brake_pressed = false)
 	enter.pressed.connect(_toggle_vehicle)
 	status_label = Label.new()
 	status_label.text = "DHAKA VELOCITY  •  Walk to the red car and tap ENTER"
@@ -229,13 +233,14 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if driving:
-		var target_speed := throttle_input * 16.0
-		var acceleration := 10.0 if throttle_input != 0.0 else 15.0
+		var target_speed := 0.0 if brake_pressed else (throttle_input * 16.0 if throttle_input > 0.0 else throttle_input * 8.0)
+		var acceleration := 28.0 if brake_pressed else (10.0 if throttle_input != 0.0 else 15.0)
 		speed = move_toward(speed, target_speed, acceleration * delta)
 		var steering_strength := clampf(absf(speed) / 4.0, 0.0, 1.0)
 		car.rotate_y(-steer_input * steering_strength * delta * 1.35 * signf(speed))
 		car.velocity = -car.global_basis.z * speed
 		car.move_and_slide()
+		status_label.text = "DRIVING  •  %d km/h  •  BRAKE to stop" % int(absf(speed) * 3.6)
 	else:
 		var direction := Vector3(move_dir.x, 0, move_dir.y)
 		player.velocity.x = direction.x * 5.0
