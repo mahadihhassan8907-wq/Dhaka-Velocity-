@@ -103,6 +103,12 @@ var steering_mode := 0 # 0 = buttons, 1 = virtual wheel
 var steering_wheel: VirtualSteeringWheel
 var steering_buttons: Array[Button] = []
 var steering_mode_button: Button
+var sport_wheel_pivots: Array[Node3D] = []
+var suv_wheel_pivots: Array[Node3D] = []
+var wheel_roll := 0.0
+var engine_audio: AudioStreamPlayer
+var horn_audio: AudioStreamPlayer
+var horn_pressed := false
 
 func _ready() -> void:
 	_load_saved_settings()
@@ -113,6 +119,7 @@ func _ready() -> void:
 	_build_checkpoint()
 	_build_camera()
 	_build_ui()
+	_build_vehicle_audio()
 	steering_mode_button.text = "STEER: WHEEL" if steering_mode == 1 else "STEER: BUTTONS"
 	steering_wheel.visible = steering_mode == 1
 	for button in steering_buttons:
@@ -241,9 +248,13 @@ func _build_car() -> void:
 		_box(sport_spoiler, Vector3(0.08, 0.34, 0.08), Vector3(spoiler_x, 0.48, 1.62), Color(0.08, 0.09, 0.11))
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
-			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
-			var sport_rim := _make_rim(car, x, z)
+			var wheel_pivot := Node3D.new()
+			wheel_pivot.position = Vector3(x, -0.25, z)
+			car.add_child(wheel_pivot)
+			_box(wheel_pivot, Vector3(0.25, 0.55, 0.7), Vector3.ZERO, Color(0.04, 0.04, 0.05))
+			var sport_rim := _make_rim(wheel_pivot, signf(x), 0.0)
 			sport_rims.append(sport_rim)
+			sport_wheel_pivots.append(wheel_pivot)
 	_make_vehicle_lights(car)
 	var car_collision := CollisionShape3D.new()
 	var car_shape := BoxShape3D.new()
@@ -257,9 +268,13 @@ func _build_car() -> void:
 	_box(suv_visual, Vector3(1.7, 0.82, 2.15), Vector3(0, 0.92, -0.15), Color(0.10, 0.20, 0.28))
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
-			_box(suv_visual, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
-			var suv_rim := _make_rim(suv_visual, x, z)
+			var wheel_pivot := Node3D.new()
+			wheel_pivot.position = Vector3(x, -0.25, z)
+			suv_visual.add_child(wheel_pivot)
+			_box(wheel_pivot, Vector3(0.25, 0.55, 0.7), Vector3.ZERO, Color(0.04, 0.04, 0.05))
+			var suv_rim := _make_rim(wheel_pivot, signf(x), 0.0)
 			suv_rims.append(suv_rim)
+			suv_wheel_pivots.append(wheel_pivot)
 	_make_vehicle_lights(suv_visual)
 	suv_visual.visible = selected_suv
 	car_paint.visible = not selected_suv
@@ -272,6 +287,63 @@ func _build_car() -> void:
 	sport_spoiler.visible = spoiler_enabled
 
 
+
+func _make_tone_wav(frequency: float, duration: float, engine_tone: bool) -> AudioStreamWAV:
+	var sample_rate := 22050
+	var frames := int(sample_rate * duration)
+	var bytes := PackedByteArray()
+	bytes.resize(frames * 2)
+	for i in range(frames):
+		var t := float(i) / float(sample_rate)
+		var envelope := 1.0 if engine_tone else (1.0 - float(i) / float(frames))
+		var fundamental := sin(TAU * frequency * t)
+		var harmonic := sin(TAU * frequency * 2.02 * t) * (0.22 if engine_tone else 0.12)
+		var low := sin(TAU * frequency * 0.5 * t) * (0.18 if engine_tone else 0.0)
+		var sample := clampf((fundamental * 0.52 + harmonic + low) * envelope * 0.32, -1.0, 1.0)
+		bytes.encode_s16(i * 2, int(sample * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = bytes
+	if engine_tone:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = frames
+	return stream
+
+func _build_vehicle_audio() -> void:
+	engine_audio = AudioStreamPlayer.new()
+	engine_audio.name = "ProceduralEngineAudio"
+	engine_audio.stream = _make_tone_wav(82.0, 0.5, true)
+	engine_audio.volume_db = -19.0
+	add_child(engine_audio)
+	engine_audio.play()
+	horn_audio = AudioStreamPlayer.new()
+	horn_audio.name = "ProceduralHornAudio"
+	horn_audio.stream = _make_tone_wav(440.0, 0.32, false)
+	horn_audio.volume_db = -8.0
+	add_child(horn_audio)
+
+func _press_horn() -> void:
+	horn_pressed = true
+	if horn_audio and not horn_audio.playing:
+		horn_audio.play()
+
+func _release_horn() -> void:
+	horn_pressed = false
+	if horn_audio and horn_audio.playing:
+		horn_audio.stop()
+
+func _update_wheel_visuals(delta: float) -> void:
+	wheel_roll = fposmod(wheel_roll + speed * delta / 0.34, TAU)
+	var pivots := sport_wheel_pivots if not selected_suv else suv_wheel_pivots
+	for index in range(pivots.size()):
+		var pivot := pivots[index]
+		pivot.rotation.x = wheel_roll
+		pivot.rotation.y = steering_visual * 0.42 if index < 2 else 0.0
+		var spring := sin(wheel_roll * 0.5 + float(index % 2) * PI) * minf(absf(speed) / 30.0, 1.0) * 0.025
+		pivot.position.y = -0.25 + spring
 
 func _make_vehicle_lights(parent: Node3D) -> void:
 	for x in [-0.68, 0.68]:
@@ -357,7 +429,7 @@ func _make_rim(parent: Node3D, side: float, depth: float) -> MeshInstance3D:
 	cylinder.bottom_radius = 0.22
 	cylinder.height = 0.10
 	rim.mesh = cylinder
-	rim.position = Vector3(side * 1.17, -0.25, depth)
+	rim.position = Vector3(side * 0.13, 0.0, depth)
 	rim.rotation.z = PI / 2.0
 	rim.material_override = _mat(rim_colors[rim_index])
 	parent.add_child(rim)
@@ -437,7 +509,8 @@ func _build_ui() -> void:
 	var enter := _make_button("ENTER", 72)
 	var nitro := _make_button("NITRO", 64)
 	var drift := _make_button("DRIFT", 64)
-	for button in [left, forward, back, right, brake, drift, nitro, enter]:
+	var horn := _make_button("HORN", 64)
+	for button in [left, forward, back, right, brake, drift, nitro, enter, horn]:
 		button.custom_minimum_size = Vector2(0, 50)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		panel.add_child(button)
@@ -457,6 +530,8 @@ func _build_ui() -> void:
 	nitro.button_up.connect(func(): nitro_pressed = false)
 	drift.button_down.connect(func(): drift_pressed = true)
 	drift.button_up.connect(func(): drift_pressed = false)
+	horn.button_down.connect(_press_horn)
+	horn.button_up.connect(_release_horn)
 	var garage_scroll := ScrollContainer.new()
 	garage_scroll.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	garage_scroll.position = Vector2(-174, 42)
@@ -711,6 +786,9 @@ func _physics_process(delta: float) -> void:
 		elif not nitro_pressed:
 			nitro_energy = minf(3.0, nitro_energy + delta * 0.22)
 		_update_brake_lights(brake_pressed or (throttle_input < 0.0 and speed > 0.5))
+		_update_wheel_visuals(delta)
+		if engine_audio:
+			engine_audio.pitch_scale = 0.82 + clampf(absf(speed) / 22.0, 0.0, 1.0) * 0.95 + (0.18 if using_nitro else 0.0)
 		_update_turn_signals(delta)
 		_update_reverse_lights(throttle_input < 0.0 and absf(speed) < 5.0)
 		var target_speed := 0.0 if brake_pressed else (24.0 if using_nitro else 16.0) if throttle_input > 0.0 else throttle_input * 8.0
@@ -764,6 +842,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			status_label.text = "DRIVING  •  %d km/h  •  NITRO %.1fs" % [int(absf(speed) * 3.6), nitro_energy]
 	else:
+		if engine_audio:
+			engine_audio.pitch_scale = move_toward(engine_audio.pitch_scale, 0.72, delta * 0.8)
 		_update_turn_signals(delta)
 		_update_brake_lights(false)
 		_update_reverse_lights(false)
