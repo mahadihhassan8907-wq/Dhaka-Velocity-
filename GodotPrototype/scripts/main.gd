@@ -7,6 +7,9 @@ var paint_index := 0
 var suv_visual: Node3D
 var suv_paint: MeshInstance3D
 var selected_suv := false
+var current_paint_color := Color(0.88, 0.12, 0.08)
+var finish_index := 1
+var finish_names: Array[String] = ["MATTE", "GLOSS", "METALLIC"]
 var paint_colors: Array[Color] = [Color(0.88, 0.12, 0.08), Color(0.08, 0.32, 0.92), Color(0.95, 0.68, 0.08), Color(0.08, 0.62, 0.34)]
 var paint_names: Array[String] = ["RED", "BLUE", "GOLD", "GREEN"]
 var camera: Camera3D
@@ -227,6 +230,7 @@ func _build_ui() -> void:
 	var paint := _make_button("PAINT", 128)
 	var next_car := _make_button("NEXT CAR", 128)
 	var silver := _make_button("SILVER", 128)
+	var finish := _make_button("FINISH: GLOSS", 128)
 	var mix_color := ColorPickerButton.new()
 	mix_color.text = "MIX COLOR"
 	mix_color.custom_minimum_size = Vector2(128, 54)
@@ -236,10 +240,12 @@ func _build_ui() -> void:
 	garage_panel.add_child(paint)
 	garage_panel.add_child(next_car)
 	garage_panel.add_child(silver)
+	garage_panel.add_child(finish)
 	garage_panel.add_child(mix_color)
 	paint.pressed.connect(_cycle_car_paint)
 	next_car.pressed.connect(_cycle_vehicle_model)
 	silver.pressed.connect(_apply_silver_paint)
+	finish.pressed.connect(_cycle_paint_finish)
 	mix_color.color_changed.connect(_apply_custom_car_color)
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
@@ -300,38 +306,42 @@ func _cycle_car_paint() -> void:
 		status_label.text = "Move closer to the red car to use the paint shop"
 		return
 	paint_index = (paint_index + 1) % paint_colors.size()
-	car_paint.material_override = _mat(paint_colors[paint_index])
-	suv_paint.material_override = _mat(paint_colors[paint_index])
+	current_paint_color = paint_colors[paint_index]
+	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Car color changed to %s" % paint_names[paint_index]
 
 func _apply_custom_car_color(color: Color) -> void:
 	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
 		status_label.text = "Move closer to your car to mix a custom paint color"
 		return
-	var sport_material := _mat(color)
-	sport_material.metallic = 0.72
-	sport_material.roughness = 0.24
-	var suv_material := _mat(color)
-	suv_material.metallic = 0.72
-	suv_material.roughness = 0.24
-	car_paint.material_override = sport_material
-	suv_paint.material_override = suv_material
+	current_paint_color = color
+	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Custom mixed paint applied"
 
 func _apply_silver_paint() -> void:
 	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
 		status_label.text = "Move closer to your car to use the silver finish"
 		return
-	var silver_color := Color(0.72, 0.76, 0.80)
-	var sport_material := _mat(silver_color)
-	sport_material.metallic = 0.92
-	sport_material.roughness = 0.18
-	var suv_material := _mat(silver_color)
-	suv_material.metallic = 0.92
-	suv_material.roughness = 0.18
-	car_paint.material_override = sport_material
-	suv_paint.material_override = suv_material
+	current_paint_color = Color(0.72, 0.76, 0.80)
+	finish_index = 2
+	_refresh_car_paint()
 	status_label.text = "GARAGE  •  Metallic silver finish applied"
+func _refresh_car_paint() -> void:
+	var metallic_values: Array[float] = [0.0, 0.25, 0.92]
+	var roughness_values: Array[float] = [0.88, 0.22, 0.16]
+	for body_mesh in [car_paint, suv_paint]:
+		var material := _mat(current_paint_color)
+		material.metallic = metallic_values[finish_index]
+		material.roughness = roughness_values[finish_index]
+		body_mesh.material_override = material
+
+func _cycle_paint_finish() -> void:
+	if not driving and player.global_position.distance_to(car.global_position) > 5.5:
+		status_label.text = "Move closer to your car to change the paint finish"
+		return
+	finish_index = (finish_index + 1) % finish_names.size()
+	_refresh_car_paint()
+	status_label.text = "GARAGE  •  %s finish applied" % finish_names[finish_index]
 func _cycle_vehicle_model() -> void:
 	if driving:
 		status_label.text = "Exit the car before switching models"
