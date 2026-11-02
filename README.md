@@ -7,6 +7,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Third-person player capsule
 - A simple red sports car
 - Three-stage City Tour mission: reach FIRST DRIVE, NORTH GATE and WEST AVENUE checkpoints
+- Four-color car paint customization using the PAINT touch button near the vehicle
 - On-foot movement and enter/exit vehicle interaction
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
