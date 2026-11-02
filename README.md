@@ -19,7 +19,8 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
 - Separate GO, REV and BRAKE touch controls with live speed display
-- Steering response scales with vehicle speed and the camera follows behind the car
+- Steering response scales with vehicle speed; the follow camera smoothly widens its field of view as speed and nitro rise
+- Front running lamps and brighter brake/reverse-warning tail lamps provide clearer vehicle feedback
 - Touch-friendly on-screen directional controls
 - Basic follow camera, lighting, and collision for the ground, buildings and player vehicle
 
