@@ -6,7 +6,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Procedurally built test city block with roads and simple buildings
 - Third-person player capsule
 - A simple red sports car
-- First playable objective: drive or walk to the glowing FIRST DRIVE checkpoint and complete the mission
+- Three-stage City Tour mission: reach FIRST DRIVE, NORTH GATE and WEST AVENUE checkpoints
 - On-foot movement and enter/exit vehicle interaction
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
