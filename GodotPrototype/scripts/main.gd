@@ -255,13 +255,15 @@ func _build_camera() -> void:
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	var panel := HBoxContainer.new()
+	var panel := GridContainer.new()
+	panel.columns = 4
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_top = -82
+	panel.offset_top = -116
 	panel.offset_bottom = -8
 	panel.offset_left = 8
 	panel.offset_right = -8
-	panel.add_theme_constant_override("separation", 5)
+	panel.add_theme_constant_override("h_separation", 6)
+	panel.add_theme_constant_override("v_separation", 4)
 	layer.add_child(panel)
 	var left := _make_button("◀", 52)
 	var forward := _make_button("GO", 52)
@@ -272,6 +274,8 @@ func _build_ui() -> void:
 	var nitro := _make_button("NITRO", 64)
 	var drift := _make_button("DRIFT", 64)
 	for button in [left, forward, back, right, brake, drift, nitro, enter]:
+		button.custom_minimum_size = Vector2(0, 50)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		panel.add_child(button)
 	left.button_down.connect(_press_left)
 	left.button_up.connect(_release_left)
