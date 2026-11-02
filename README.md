@@ -7,7 +7,9 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Third-person player capsule
 - Two selectable vehicle silhouettes: Velocity Sport and Metro SUV (switch with the CAR touch button near the vehicle)
 - Three-stage City Tour mission: reach FIRST DRIVE, NORTH GATE and WEST AVENUE checkpoints
-- Four-color paint customization shared by both garage vehicle models using the PAINT touch button
+- Four-color preset paint cycling plus a full custom color picker for mixing any color
+- Dedicated metallic SILVER finish with reflective material settings
+- Custom paint and silver finish apply to both selectable garage vehicle models
 - On-foot movement and enter/exit vehicle interaction
 - Four simple moving traffic cars on the main road
 - Road lane markings and street lights
