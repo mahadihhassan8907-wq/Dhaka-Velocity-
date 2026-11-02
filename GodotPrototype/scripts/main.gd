@@ -611,6 +611,8 @@ func _toggle_steering_mode() -> void:
 func _set_wheel_steering(value: float) -> void:
 	if steering_mode == 1:
 		steer_input = value
+		if not driving:
+			_set_move(Vector2(value, move_dir.y))
 
 func _make_button(caption: String, button_width: float) -> Button:
 	var button := Button.new()
@@ -742,6 +744,8 @@ func _toggle_vehicle() -> void:
 		throttle_input = 0.0
 		steer_input = 0.0
 		steering_visual = 0.0
+		move_dir = Vector2.ZERO
+		horn_pressed = false
 		brake_pressed = false
 		nitro_pressed = false
 		drift_pressed = false
