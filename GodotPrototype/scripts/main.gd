@@ -7,11 +7,13 @@ var driving := false
 var move_dir := Vector2.ZERO
 var speed := 0.0
 var status_label: Label
+var traffic_cars: Array[Node3D] = []
 
 func _ready() -> void:
 	_build_city()
 	_build_player()
 	_build_car()
+	_build_traffic()
 	_build_camera()
 	_build_ui()
 
@@ -52,6 +54,12 @@ func _build_city() -> void:
 			_box(self, Vector3(8.2, 0.35, 8.2), Vector3(x, height + 0.12, z), Color(0.20, 0.28, 0.36))
 	_box(self, Vector3(1, 0.03, 90), Vector3(-3, 0.06, 0), Color(0.9, 0.82, 0.25))
 	_box(self, Vector3(1, 0.03, 90), Vector3(3, 0.06, 0), Color(0.9, 0.82, 0.25))
+	for z in range(-42, 45, 6):
+		_box(self, Vector3(0.18, 0.025, 2.5), Vector3(0, 0.065, z), Color(0.92, 0.92, 0.88))
+	for x in [-9, 9]:
+		for z in [-36, -18, 18, 36]:
+			_solid_box(self, Vector3(0.25, 4.5, 0.25), Vector3(x, 2.25, z), Color(0.18, 0.20, 0.22))
+			_box(self, Vector3(1.4, 0.18, 0.7), Vector3(x, 4.55, z), Color(0.95, 0.82, 0.42))
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -30, 0)
 	sun.light_energy = 1.2
@@ -94,6 +102,18 @@ func _build_car() -> void:
 	for x in [-1.02, 1.02]:
 		for z in [-1.2, 1.2]:
 			_box(car, Vector3(0.25, 0.55, 0.7), Vector3(x, -0.25, z), Color(0.04, 0.04, 0.05))
+
+
+func _build_traffic() -> void:
+	for i in range(4):
+		var traffic := Node3D.new()
+		traffic.name = "Traffic_%d" % i
+		traffic.position = Vector3(-2.0 if i % 2 == 0 else 2.0, 0.55, -30.0 + float(i) * 18.0)
+		add_child(traffic)
+		var paint := [Color(0.12, 0.42, 0.82), Color(0.82, 0.72, 0.18), Color(0.82, 0.82, 0.78), Color(0.16, 0.58, 0.38)][i]
+		_box(traffic, Vector3(1.65, 0.62, 3.0), Vector3.ZERO, paint)
+		_box(traffic, Vector3(1.25, 0.48, 1.35), Vector3(0, 0.5, -0.15), Color(0.12, 0.20, 0.28))
+		traffic_cars.append(traffic)
 
 func _build_camera() -> void:
 	camera = Camera3D.new()
@@ -158,6 +178,15 @@ func _toggle_vehicle() -> void:
 		status_label.text = "Driving • Use arrows, ENTER to exit"
 	else:
 		status_label.text = "Move closer to the red car first"
+
+func _process(delta: float) -> void:
+	for i in range(traffic_cars.size()):
+		var traffic := traffic_cars[i]
+		traffic.position.z += (5.0 + float(i % 2) * 1.5) * delta * (1.0 if i % 2 == 0 else -1.0)
+		if traffic.position.z > 48.0:
+			traffic.position.z = -48.0
+		elif traffic.position.z < -48.0:
+			traffic.position.z = 48.0
 
 func _physics_process(delta: float) -> void:
 	if driving:
