@@ -21,6 +21,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Separate GO, REV and BRAKE touch controls with live speed display
 - Selectable steering modes: left/right touch buttons or a draggable, self-centering virtual steering wheel; the selected mode hides the unused steering controls
 - Scrollable compact garage controls for smaller mobile screens
+- Persistent local garage settings: paint color and finish, rim finish, selected vehicle, spoiler, headlights and steering mode are saved between launches
 - Steering input now eases smoothly instead of snapping instantly
 - Nearby traffic triggers a slowdown and a short traffic-alert message
 - Steering response scales with vehicle speed; the follow camera smoothly widens its field of view as speed and nitro rise
@@ -34,7 +35,7 @@ An original Android-first open-world driving prototype built with Godot 4.
 Open the `GodotPrototype` folder as a Godot project. The main scene is `Main.tscn`.
 
 ## Current limitations
-This is an early playable-slice foundation, not a finished game. Vehicle physics, traffic, additional mission chains, interiors, saving, weapons and multiplayer are not implemented yet. The project has not yet been built or device-tested as an APK.
+This is an early playable-slice foundation, not a finished game. Vehicle physics and traffic are still arcade-style prototypes; full progress/mission saving, additional mission chains, enterable interiors, shops, home ownership, weapons/police systems and multiplayer are not implemented yet. The project has not yet been opened in the Godot editor, run, or device-tested as an APK. First test checklist: open `GodotPrototype/project.godot`, run the main scene, check both steering modes, enter/exit, garage customization persistence after restart, mission checkpoints, traffic impacts and UI fit on the target phone. Fix any parser/runtime errors before expanding content.
 
 ## Development branch
 `godot-prototype`
