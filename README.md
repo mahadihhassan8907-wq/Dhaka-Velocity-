@@ -22,7 +22,9 @@ An original Android-first open-world driving prototype built with Godot 4.
 - Steering input now eases smoothly instead of snapping instantly
 - Nearby traffic triggers a slowdown and a short traffic-alert message
 - Steering response scales with vehicle speed; the follow camera smoothly widens its field of view as speed and nitro rise
-- Front running lamps and brighter brake/reverse-warning tail lamps provide clearer vehicle feedback
+- Functional toggleable headlights with forward spotlights on both vehicles
+- Brake lamps, reverse lamps and animated left/right turn indicators respond to braking, reversing and steering
+- Traffic-aware approach braking and basic impact response against traffic and city obstacles
 - Touch-friendly on-screen directional controls
 - Basic follow camera, lighting, and collision for the ground, buildings and player vehicle
 
