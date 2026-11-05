@@ -442,7 +442,7 @@ func _build_traffic() -> void:
 		traffic.name = "Traffic_%d" % i
 		traffic.position = Vector3(-2.0 if i % 2 == 0 else 2.0, 0.55, -30.0 + float(i) * 18.0)
 		add_child(traffic)
-		var paint := [Color(0.12, 0.42, 0.82), Color(0.82, 0.72, 0.18), Color(0.82, 0.82, 0.78), Color(0.16, 0.58, 0.38)][i]
+		var paint: Color = [Color(0.12, 0.42, 0.82), Color(0.82, 0.72, 0.18), Color(0.82, 0.82, 0.78), Color(0.16, 0.58, 0.38)][i]
 		_box(traffic, Vector3(1.65, 0.62, 3.0), Vector3.ZERO, paint)
 		var traffic_collision := CollisionShape3D.new()
 		var traffic_shape := BoxShape3D.new()
