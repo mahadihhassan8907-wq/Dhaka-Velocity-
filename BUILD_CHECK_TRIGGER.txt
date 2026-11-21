@@ -1,0 +1,1 @@
+Trigger the updated Godot smoke-test workflow. This file is safe to remove in a later cleanup commit.
