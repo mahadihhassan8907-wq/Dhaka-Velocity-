@@ -76,13 +76,18 @@ jobs:
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
+          # Supply debug signing explicitly to the exporter as well as EditorSettings.
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
+          sed -i '/^package\/signed=/a keystore/debug="'$HOME'/.android/debug.keystore"\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"' export_presets.cfg
 
       - name: Import and export Android APK
         run: |
           set -o pipefail
-          godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --editor --path . --quit
+          godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --editor --path . --import --quit
           godot-bin/Godot_v4.4.1-stable_linux.x86_64 \
-            --headless --path . --export-debug "Android" build/DhakaVelocity-debug.apk \
+            --headless --verbose --path . --export-debug "Android" build/DhakaVelocity-debug.apk \
             2>&1 | tee build/android-export.log
           test -s build/DhakaVelocity-debug.apk
 
