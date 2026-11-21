@@ -1,26 +1,34 @@
 extends Node3D
 
-# Mobile touch IDs are tracked per button so multiple controls can be held together.
+# Each button independently hit-tests every screen touch in viewport coordinates.
+# This avoids relying on Godot's single-control GUI touch capture for simultaneous buttons.
 class MultiTouchButton extends Button:
 	var active_touches: Dictionary = {}
 
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventScreenTouch:
-			var touch_id := event.index
-			if event.pressed:
-				if Rect2(Vector2.ZERO, size).has_point(event.position) and not active_touches.has(touch_id):
-					active_touches[touch_id] = true
-					if active_touches.size() == 1:
-						set_pressed_no_signal(true)
-						emit_signal("button_down")
-			elif active_touches.has(touch_id):
-				active_touches.erase(touch_id)
-				if active_touches.is_empty():
-					set_pressed_no_signal(false)
-					emit_signal("button_up")
-					if Rect2(Vector2.ZERO, size).has_point(event.position):
-						emit_signal("pressed")
-			accept_event()
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		focus_mode = Control.FOCUS_NONE
+		set_process_input(true)
+
+	func _input(event: InputEvent) -> void:
+		if not is_visible_in_tree() or not (event is InputEventScreenTouch):
+			return
+		var local_position: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
+		var inside := Rect2(Vector2.ZERO, size).has_point(local_position)
+		var touch_id := event.index
+		if event.pressed:
+			if inside and not active_touches.has(touch_id):
+				active_touches[touch_id] = true
+				if active_touches.size() == 1:
+					set_pressed_no_signal(true)
+					emit_signal("button_down")
+		elif active_touches.has(touch_id):
+			active_touches.erase(touch_id)
+			if active_touches.is_empty():
+				set_pressed_no_signal(false)
+				emit_signal("button_up")
+			if inside:
+				emit_signal("pressed")
 
 class VirtualSteeringWheel extends Control:
 	signal steering_changed(value: float)
