@@ -1,0 +1,1 @@
+The recovered detailed sport sedan GLB remains preserved in ChatGPT Library. Until it can be added to this repository, Dhaka Velocity uses the procedural vehicle fallback. The startup smoke test checks that the project still launches.
