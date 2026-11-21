@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    name: Import project and parse GDScript
+    name: Import, parse and smoke-test game
     runs-on: ubuntu-latest
     steps:
       - name: Checkout project
@@ -26,14 +26,22 @@ jobs:
 
       - name: Import assets and validate scripts
         run: |
+          set -o pipefail
           mkdir -p build
           godot-bin/Godot_v4.4.1-stable_linux.x86_64 \
             --headless --editor --path . --quit \
             2>&1 | tee build/godot-validation.log
 
-      - name: Upload validation log
+      - name: Launch game scene for a short smoke test
+        run: |
+          set -o pipefail
+          godot-bin/Godot_v4.4.1-stable_linux.x86_64 \
+            --headless --path . --quit-after 120 \
+            2>&1 | tee build/godot-smoke-test.log
+
+      - name: Upload validation logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: godot-validation-log
-          path: build/godot-validation.log
+          name: godot-validation-logs
+          path: build/*.log
