@@ -1,5 +1,26 @@
 extends Node3D
 
+class MultiTouchButton extends Button:
+	var active_touches: Dictionary = {}
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch:
+			var touch_id := event.index
+			if event.pressed:
+				if Rect2(Vector2.ZERO, size).has_point(event.position) and not active_touches.has(touch_id):
+					active_touches[touch_id] = true
+					if active_touches.size() == 1:
+						set_pressed_no_signal(true)
+						emit_signal("button_down")
+			elif active_touches.has(touch_id):
+				active_touches.erase(touch_id)
+				if active_touches.is_empty():
+					set_pressed_no_signal(false)
+					emit_signal("button_up")
+					if Rect2(Vector2.ZERO, size).has_point(event.position):
+						emit_signal("pressed")
+			accept_event()
+
 class VirtualSteeringWheel extends Control:
 	signal steering_changed(value: float)
 	var steering_value := 0.0
@@ -921,7 +942,7 @@ func _set_wheel_steering(value: float) -> void:
 			_set_move(Vector2(value, move_dir.y))
 
 func _make_button(caption: String, button_width: float) -> Button:
-	var button := Button.new()
+	var button := MultiTouchButton.new()
 	button.text = caption
 	button.custom_minimum_size = Vector2(button_width, 44)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
