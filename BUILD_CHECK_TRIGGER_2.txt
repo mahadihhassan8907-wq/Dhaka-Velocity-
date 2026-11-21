@@ -1,0 +1,1 @@
+Trigger after guarding the optional GLB resource check.
