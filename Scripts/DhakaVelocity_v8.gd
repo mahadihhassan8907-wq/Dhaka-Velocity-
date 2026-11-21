@@ -506,7 +506,7 @@ func _build_car() -> void:
 			if old_visual is Node3D:
 				old_visual.visible = false
 	else:
-		push_error("Could not load sport car model: res://Assets/DhakaVelocity_Super3D_SportSedan.glb")
+		push_warning("Detailed sport car model is not bundled yet; using procedural sport-car visuals.")
 
 
 func _add_car_detail_package(parent: Node3D, is_suv: bool) -> void:
