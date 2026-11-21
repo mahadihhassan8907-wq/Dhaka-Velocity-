@@ -15,7 +15,7 @@ class MultiTouchButton extends Button:
 			return
 		var local_position: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
 		var inside := Rect2(Vector2.ZERO, size).has_point(local_position)
-		var touch_id := event.index
+		var touch_id: int = event.index
 		if event.pressed:
 			if inside and not active_touches.has(touch_id):
 				active_touches[touch_id] = true
