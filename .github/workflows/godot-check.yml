@@ -1,0 +1,39 @@
+name: Dhaka Velocity - Godot Validation
+
+on:
+  push:
+    branches: [godot-cloud-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Import project and parse GDScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.4.1
+        run: |
+          curl -L --fail --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip \
+            -o godot.zip
+          unzip -q godot.zip -d godot-bin
+          chmod +x godot-bin/Godot_v4.4.1-stable_linux.x86_64
+
+      - name: Import assets and validate scripts
+        run: |
+          mkdir -p build
+          godot-bin/Godot_v4.4.1-stable_linux.x86_64 \
+            --headless --editor --path . --quit \
+            2>&1 | tee build/godot-validation.log
+
+      - name: Upload validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-validation-log
+          path: build/godot-validation.log
