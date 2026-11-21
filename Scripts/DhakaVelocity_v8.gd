@@ -491,22 +491,26 @@ func _build_car() -> void:
 		rim_material.roughness = 0.24
 		rim.material_override = rim_material
 	sport_spoiler.visible = spoiler_enabled
-	# Replace the placeholder sport-car visuals with the imported detailed GLB.
-	var sport_scene := load("res://Assets/DhakaVelocity_Super3D_SportSedan.glb") as PackedScene
-	if sport_scene != null:
-		sport_model = sport_scene.instantiate() as Node3D
-		sport_model.name = "Super3DSportSedan"
-		car.add_child(sport_model)
-		sport_model.position = Vector3.ZERO
-		sport_model.visible = not selected_suv
-		# Keep the physics collider and the alternate SUV; hide only the old sport-car visuals.
-		for old_visual in car.get_children():
-			if old_visual == sport_model or old_visual == suv_visual or old_visual is CollisionShape3D:
-				continue
-			if old_visual is Node3D:
-				old_visual.visible = false
+	# Replace the procedural sport-car visuals only when the detailed GLB is bundled.
+	var sport_model_path := "res://Assets/DhakaVelocity_Super3D_SportSedan.glb"
+	if ResourceLoader.exists(sport_model_path):
+		var sport_scene := load(sport_model_path) as PackedScene
+		if sport_scene != null:
+			sport_model = sport_scene.instantiate() as Node3D
+			sport_model.name = "Super3DSportSedan"
+			car.add_child(sport_model)
+			sport_model.position = Vector3.ZERO
+			sport_model.visible = not selected_suv
+			# Keep the physics collider and alternate SUV; hide only old sport-car visuals.
+			for old_visual in car.get_children():
+				if old_visual == sport_model or old_visual == suv_visual or old_visual is CollisionShape3D:
+					continue
+				if old_visual is Node3D:
+					old_visual.visible = false
+		else:
+			push_warning("Detailed sport car GLB could not be instantiated; using procedural visuals.")
 	else:
-		push_warning("Detailed sport car model is not bundled yet; using procedural sport-car visuals.")
+		push_warning("Detailed sport car GLB is not bundled yet; using procedural visuals.")
 
 
 func _add_car_detail_package(parent: Node3D, is_suv: bool) -> void:
