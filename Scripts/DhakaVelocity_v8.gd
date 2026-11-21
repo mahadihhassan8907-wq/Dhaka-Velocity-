@@ -1,5 +1,6 @@
 extends Node3D
 
+# Mobile touch IDs are tracked per button so multiple controls can be held together.
 class MultiTouchButton extends Button:
 	var active_touches: Dictionary = {}
 
