@@ -85,6 +85,9 @@ jobs:
       - name: Import and export Android APK
         run: |
           set -o pipefail
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --editor --path . --import --quit
           godot-bin/Godot_v4.4.1-stable_linux.x86_64 \
             --headless --verbose --path . --export-debug "Android" build/DhakaVelocity-debug.apk \
