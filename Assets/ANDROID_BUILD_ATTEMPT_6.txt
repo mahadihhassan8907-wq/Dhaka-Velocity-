@@ -1,0 +1,1 @@
+Retry after writing Android SDK paths to the Godot 4.4-specific EditorSettings file.
