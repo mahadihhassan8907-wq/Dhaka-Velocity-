@@ -801,12 +801,10 @@ func _build_ui() -> void:
 	var back := _make_button("REV", 52)
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
-	# Use a standard Godot Button for enter/exit so Android GUI touch handles it reliably.
-	var enter := Button.new()
-	enter.text = "ENTER"
+	# Keep enter/exit on the same multi-touch button class as the other mobile controls.
+	var enter := _make_button("ENTER", 112)
 	enter.custom_minimum_size = Vector2(112, 58)
 	enter.size = Vector2(112, 58)
-	enter.add_theme_font_size_override("font_size", 19)
 	enter.focus_mode = Control.FOCUS_NONE
 	enter.mouse_filter = Control.MOUSE_FILTER_STOP
 	enter.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -1134,7 +1132,9 @@ func _toggle_vehicle() -> void:
 		if enter_exit_button:
 			enter_exit_button.text = "ENTER"
 		status_label.text = "On foot • Walk to the car and tap ENTER"
-	elif player.global_position.distance_to(car.global_position) < 4.0:
+	else:
+		# Entering is always allowed from the on-foot state; avoid a distance gate
+		# that can strand the player when touch movement or camera direction differs.
 		driving = true
 		if enter_exit_button:
 			enter_exit_button.text = "EXIT"
@@ -1143,8 +1143,6 @@ func _toggle_vehicle() -> void:
 		if engine_audio and not engine_audio.playing:
 			engine_audio.play()
 		status_label.text = "Driving • Use arrows, ENTER to exit"
-	else:
-		status_label.text = "Move closer to the red car first"
 
 	_update_control_visibility()
 
