@@ -801,15 +801,25 @@ func _build_ui() -> void:
 	var back := _make_button("REV", 52)
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
-	var enter := _make_button("ENTER", 72)
+	# Use a standard Godot Button for enter/exit so Android GUI touch handles it reliably.
+	var enter := Button.new()
+	enter.text = "ENTER"
+	enter.custom_minimum_size = Vector2(112, 58)
+	enter.size = Vector2(112, 58)
+	enter.add_theme_font_size_override("font_size", 19)
+	enter.focus_mode = Control.FOCUS_NONE
+	enter.mouse_filter = Control.MOUSE_FILTER_STOP
+	enter.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	enter.position = Vector2(-126, -236)
 	enter_exit_button = enter
 	var nitro := _make_button("NITRO", 64)
 	var drift := _make_button("DRIFT", 64)
 	var horn := _make_button("HORN", 64)
-	for button in [left, forward, back, right, brake, drift, nitro, enter, horn]:
+	for button in [left, forward, back, right, brake, drift, nitro, horn]:
 		button.custom_minimum_size = Vector2(0, 50)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		panel.add_child(button)
+	layer.add_child(enter)
 	vehicle_buttons = [left, forward, back, right, brake, drift, nitro, horn]
 	steering_buttons = [left, right]
 	left.button_down.connect(_press_left)
