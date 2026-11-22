@@ -125,6 +125,7 @@ class VirtualMoveJoystick extends Control:
 
 var player: CharacterBody3D
 var car: CharacterBody3D
+var enter_exit_button: Button
 var car_paint: MeshInstance3D
 var paint_index := 0
 var suv_visual: Node3D
@@ -801,6 +802,7 @@ func _build_ui() -> void:
 	var right := _make_button("▶", 52)
 	var brake := _make_button("BRAKE", 64)
 	var enter := _make_button("ENTER", 72)
+	enter_exit_button = enter
 	var nitro := _make_button("NITRO", 64)
 	var drift := _make_button("DRIFT", 64)
 	var horn := _make_button("HORN", 64)
@@ -1119,9 +1121,13 @@ func _toggle_vehicle() -> void:
 			horn_audio.stop()
 		player.global_position = car.global_position + Vector3(2.2, 0.4, 0)
 		player.visible = true
+		if enter_exit_button:
+			enter_exit_button.text = "ENTER"
 		status_label.text = "On foot • Walk to the car and tap ENTER"
 	elif player.global_position.distance_to(car.global_position) < 4.0:
 		driving = true
+		if enter_exit_button:
+			enter_exit_button.text = "EXIT"
 		camera_yaw = 0.0
 		player.visible = false
 		if engine_audio and not engine_audio.playing:
