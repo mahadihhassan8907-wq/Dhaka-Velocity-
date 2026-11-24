@@ -6,7 +6,8 @@ class MultiTouchButton extends Button:
 	var active_touches: Dictionary = {}
 
 	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		# Touches are handled manually in _input; ignore native GUI handling to prevent a second press signal.
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		focus_mode = Control.FOCUS_NONE
 		set_process_input(true)
 
@@ -806,7 +807,8 @@ func _build_ui() -> void:
 	enter.custom_minimum_size = Vector2(112, 58)
 	enter.size = Vector2(112, 58)
 	enter.focus_mode = Control.FOCUS_NONE
-	enter.mouse_filter = Control.MOUSE_FILTER_STOP
+	# The custom touch handler owns this button; native GUI handling would double-toggle it.
+	enter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	enter.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	enter.position = Vector2(-126, -236)
 	enter_exit_button = enter
