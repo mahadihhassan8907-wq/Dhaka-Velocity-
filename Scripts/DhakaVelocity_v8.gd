@@ -1211,7 +1211,9 @@ func _get_camera_pinch_distance() -> float:
 	if camera_touch_positions.size() < 2:
 		return 0.0
 	var points: Array = camera_touch_positions.values()
-	return (points[0] as Vector2).distance_to(points[1] as Vector2)
+	var first_point := Vector2(points[0])
+	var second_point := Vector2(points[1])
+	return first_point.distance_to(second_point)
 
 func _rotate_orbit_camera(drag_delta: Vector2) -> void:
 	camera_yaw -= drag_delta.x * camera_drag_sensitivity
