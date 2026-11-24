@@ -1205,7 +1205,7 @@ func _input(event: InputEvent) -> void:
 			if camera_touch_positions.size() >= 2:
 				var new_distance := _get_camera_pinch_distance()
 				if camera_pinch_distance > 0.0:
-					camera_zoom = clampf(camera_zoom - (new_distance - camera_pinch_distance) * 0.003, 0.55, 1.7)
+					camera_zoom = clampf(camera_zoom - (new_distance - camera_pinch_distance) * 0.0055, 0.25, 2.5)
 				camera_pinch_distance = new_distance
 			elif camera_dragging and event.index == camera_touch_index:
 				_rotate_orbit_camera(event.relative)
@@ -1230,10 +1230,10 @@ func _rotate_orbit_camera(drag_delta: Vector2) -> void:
 	camera_pitch = clampf(camera_pitch + drag_delta.y * camera_drag_sensitivity, 0.15, 1.05)
 
 func _zoom_in() -> void:
-	camera_zoom = clampf(camera_zoom - 0.12, 0.55, 1.7)
+	camera_zoom = clampf(camera_zoom - 0.18, 0.25, 2.5)
 
 func _zoom_out() -> void:
-	camera_zoom = clampf(camera_zoom + 0.12, 0.55, 1.7)
+	camera_zoom = clampf(camera_zoom + 0.18, 0.25, 2.5)
 
 func _process(delta: float) -> void:
 	if not mission_complete:
