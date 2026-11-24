@@ -3,10 +3,10 @@ extends Node3D
 # Each button independently hit-tests every screen touch in viewport coordinates.
 # This avoids relying on Godot's single-control GUI touch capture for simultaneous buttons.
 class MultiTouchButton extends Button:
-	var active_touches: Dictionary = {}
+	var active_touch_id := -1
 
 	func _ready() -> void:
-		# Touches are handled manually in _input; ignore native GUI handling to prevent a second press signal.
+		# Handle touch input manually so Godot's native GUI path cannot double-activate this button.
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		focus_mode = Control.FOCUS_NONE
 		set_process_input(true)
@@ -17,17 +17,18 @@ class MultiTouchButton extends Button:
 		var local_position: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
 		var inside := Rect2(Vector2.ZERO, size).has_point(local_position)
 		var touch_id: int = event.index
+
 		if event.pressed:
-			if inside and not active_touches.has(touch_id):
-				active_touches[touch_id] = true
-				if active_touches.size() == 1:
-					set_pressed_no_signal(true)
-					emit_signal("button_down")
-		elif active_touches.has(touch_id):
-			active_touches.erase(touch_id)
-			if active_touches.is_empty():
-				set_pressed_no_signal(false)
-				emit_signal("button_up")
+			# One finger can own this button at a time. Other fingers may still use other controls.
+			if inside and active_touch_id == -1:
+				active_touch_id = touch_id
+				set_pressed_no_signal(true)
+				emit_signal("button_down")
+		elif touch_id == active_touch_id:
+			active_touch_id = -1
+			set_pressed_no_signal(false)
+			emit_signal("button_up")
+			# Activate only once, and only if the owning finger is released inside the button.
 			if inside:
 				emit_signal("pressed")
 
@@ -155,6 +156,7 @@ var camera_dragging := false
 var camera_touch_index := -1
 var camera_touch_positions: Dictionary = {}
 var camera_pinch_distance := 0.0
+var last_vehicle_toggle_msec := -1000
 var camera_drag_sensitivity := 0.0011
 var camera_zoom := 1.0
 var driving := false
@@ -1114,6 +1116,12 @@ func _cycle_character() -> void:
 	_save_game_settings()
 
 func _toggle_vehicle() -> void:
+	# Ignore duplicate touch/click activations arriving within the same short input burst.
+	var now_msec := Time.get_ticks_msec()
+	if now_msec - last_vehicle_toggle_msec < 450:
+		return
+	last_vehicle_toggle_msec = now_msec
+
 	if driving:
 		driving = false
 		speed = 0.0
@@ -1164,13 +1172,15 @@ func _advance_city_tour() -> void:
 	status_label.text = "Checkpoint %d/3 reached! Next destination marked." % mission_index
 
 func _input(event: InputEvent) -> void:
-	# Reserve the lower part of the screen for driving buttons and other UI.
+	# Keep camera gestures inside the unobstructed central area. The right side contains
+	# Garage/Zoom controls and the lower band contains driving, ENTER, and character controls.
 	var viewport_size := get_viewport().get_visible_rect().size
-	var ui_top := viewport_size.y - 190.0
+	var camera_area_right := viewport_size.x - 190.0
+	var camera_area_bottom := viewport_size.y - 190.0
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if event.position.y < ui_top:
+			if event.position.x < camera_area_right and event.position.y < camera_area_bottom:
 				camera_touch_positions[event.index] = event.position
 				if camera_touch_positions.size() == 1:
 					camera_dragging = true
@@ -1201,7 +1211,7 @@ func _input(event: InputEvent) -> void:
 				_rotate_orbit_camera(event.relative)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-			camera_dragging = event.position.y < ui_top
+			camera_dragging = event.position.x < camera_area_right and event.position.y < camera_area_bottom
 		else:
 			camera_dragging = false
 	elif event is InputEventMouseMotion and camera_dragging:
