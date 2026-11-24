@@ -153,6 +153,8 @@ var camera_yaw := 0.0
 var camera_pitch := 0.48
 var camera_dragging := false
 var camera_touch_index := -1
+var camera_touch_positions: Dictionary = {}
+var camera_pinch_distance := 0.0
 var camera_drag_sensitivity := 0.0011
 var camera_zoom := 1.0
 var driving := false
@@ -1169,15 +1171,34 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if event.position.y < ui_top:
-				camera_dragging = true
-				camera_touch_index = event.index
+				camera_touch_positions[event.index] = event.position
+				if camera_touch_positions.size() == 1:
+					camera_dragging = true
+					camera_touch_index = event.index
+				elif camera_touch_positions.size() == 2:
+					camera_dragging = false
+					camera_pinch_distance = _get_camera_pinch_distance()
 		else:
-			if event.index == camera_touch_index:
+			camera_touch_positions.erase(event.index)
+			if camera_touch_positions.size() >= 2:
+				camera_pinch_distance = _get_camera_pinch_distance()
+			elif camera_touch_positions.size() == 1:
+				camera_touch_index = int(camera_touch_positions.keys()[0])
+				camera_dragging = true
+			else:
 				camera_dragging = false
 				camera_touch_index = -1
+				camera_pinch_distance = 0.0
 	elif event is InputEventScreenDrag:
-		if camera_dragging and event.index == camera_touch_index:
-			_rotate_orbit_camera(event.relative)
+		if camera_touch_positions.has(event.index):
+			camera_touch_positions[event.index] = event.position
+			if camera_touch_positions.size() >= 2:
+				var new_distance := _get_camera_pinch_distance()
+				if camera_pinch_distance > 0.0:
+					camera_zoom = clampf(camera_zoom - (new_distance - camera_pinch_distance) * 0.003, 0.55, 1.7)
+				camera_pinch_distance = new_distance
+			elif camera_dragging and event.index == camera_touch_index:
+				_rotate_orbit_camera(event.relative)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			camera_dragging = event.position.y < ui_top
@@ -1185,6 +1206,12 @@ func _input(event: InputEvent) -> void:
 			camera_dragging = false
 	elif event is InputEventMouseMotion and camera_dragging:
 		_rotate_orbit_camera(event.relative)
+
+func _get_camera_pinch_distance() -> float:
+	if camera_touch_positions.size() < 2:
+		return 0.0
+	var points: Array = camera_touch_positions.values()
+	return (points[0] as Vector2).distance_to(points[1] as Vector2)
 
 func _rotate_orbit_camera(drag_delta: Vector2) -> void:
 	camera_yaw -= drag_delta.x * camera_drag_sensitivity
