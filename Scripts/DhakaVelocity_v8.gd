@@ -1432,6 +1432,7 @@ func _zoom_in() -> void:
 func _zoom_out() -> void:
 	camera_zoom = clampf(camera_zoom + 0.18, 0.25, 2.5)
 
+func _process(delta: float) -> void:
 	if not driving and is_instance_valid(shop_door_pivot) and is_instance_valid(shop_interaction_button):
 		var shop_distance := player.global_position.distance_to(shop_door_pivot.global_position + Vector3(1.0, 0.0, 0.0))
 		shop_interaction_button.visible = shop_distance < 4.0
