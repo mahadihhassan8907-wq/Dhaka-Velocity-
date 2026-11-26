@@ -179,6 +179,10 @@ var mission_points: Array[Vector3] = [
 var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
 var pedestrians: Array[Dictionary] = []
+var interactive_shop_created := false
+var shop_door_pivot: Node3D
+var shop_door_open := false
+var shop_interaction_button: Button
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
@@ -367,6 +371,10 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 	building.name = "Shop_Building" if is_shop else "City_Building"
 	building.position = world_position
 	add_child(building)
+	if is_shop and not interactive_shop_created:
+		interactive_shop_created = true
+		_build_enterable_shop_structure(building, width, depth, height, facade_color)
+		return
 
 	var collision := CollisionShape3D.new()
 	var collision_shape := BoxShape3D.new()
@@ -397,6 +405,47 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 	if is_shop:
 		_box(building, Vector3(width * 0.72, 0.75, 0.18), Vector3(0.0, 3.15, -depth * 0.5 - 0.10), Color(0.12, 0.34, 0.43))
 		_box(building, Vector3(width * 0.78, 0.16, 0.35), Vector3(0.0, 2.55, -depth * 0.5 - 0.18), Color(0.86, 0.56, 0.20))
+
+
+
+func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth: float, height: float, facade_color: Color) -> void:
+	# First true interior vertical slice: open doorway, walkable floor, walls and shop fixtures.
+	var wall_height := 3.4
+	var wall_thickness := 0.35
+	var door_width := 2.0
+	var front_z := -depth * 0.5
+	_solid_box(building, Vector3(width, 0.22, depth), Vector3(0.0, 0.0, 0.0), Color(0.34, 0.31, 0.27))
+	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(-width * 0.5, wall_height * 0.5, 0.0), facade_color)
+	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(width * 0.5, wall_height * 0.5, 0.0), facade_color)
+	_solid_box(building, Vector3(width, wall_height, wall_thickness), Vector3(0.0, wall_height * 0.5, depth * 0.5), facade_color)
+	var side_width := (width - door_width) * 0.5
+	_solid_box(building, Vector3(side_width, wall_height, wall_thickness), Vector3(-(door_width + side_width) * 0.5, wall_height * 0.5, front_z), facade_color)
+	_solid_box(building, Vector3(side_width, wall_height, wall_thickness), Vector3((door_width + side_width) * 0.5, wall_height * 0.5, front_z), facade_color)
+	_solid_box(building, Vector3(door_width, 0.9, wall_thickness), Vector3(0.0, wall_height - 0.45, front_z), facade_color)
+	# Upper building mass preserves the skyline while leaving a usable ground-floor interior.
+	var upper_height := maxf(1.0, height - wall_height)
+	_solid_box(building, Vector3(width, upper_height, depth), Vector3(0.0, wall_height + upper_height * 0.5, 0.0), facade_color)
+	_solid_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+	# Door pivots from its left edge and swings inward when opened.
+	shop_door_pivot = Node3D.new()
+	shop_door_pivot.position = Vector3(-door_width * 0.5, 0.0, front_z - 0.12)
+	building.add_child(shop_door_pivot)
+	var door_body := StaticBody3D.new()
+	shop_door_pivot.add_child(door_body)
+	_box(door_body, Vector3(door_width, 2.4, 0.16), Vector3(door_width * 0.5, 1.2, 0.0), Color(0.20, 0.12, 0.07))
+	var door_collision := CollisionShape3D.new()
+	var door_shape := BoxShape3D.new()
+	door_shape.size = Vector3(door_width, 2.4, 0.16)
+	door_collision.shape = door_shape
+	door_collision.position = Vector3(door_width * 0.5, 1.2, 0.0)
+	door_body.add_child(door_collision)
+	# Basic interior fixtures make the shop visibly usable rather than an empty shell.
+	_box(building, Vector3(3.8, 1.05, 0.85), Vector3(0.0, 0.62, -1.6), Color(0.34, 0.20, 0.11))
+	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(-4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
+	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
+	_box(building, Vector3(0.9, 0.7, 0.65), Vector3(0.0, 1.0, -2.0), Color(0.12, 0.32, 0.38))
+	_box(building, Vector3(1.0, 0.08, 0.72), Vector3(0.0, 1.38, -2.0), Color(0.12, 0.16, 0.18))
+	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
 
 
 func _build_city_streetlight(world_position: Vector3) -> void:
@@ -1051,6 +1100,14 @@ func _build_ui() -> void:
 	jump_button.custom_minimum_size = Vector2(72, 54)
 	layer.add_child(jump_button)
 	jump_button.pressed.connect(func(): jump_requested = true)
+	shop_interaction_button = _make_button("OPEN SHOP", 112)
+	shop_interaction_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	shop_interaction_button.position = Vector2(-178, -220)
+	shop_interaction_button.size = Vector2(156, 48)
+	shop_interaction_button.custom_minimum_size = Vector2(156, 48)
+	layer.add_child(shop_interaction_button)
+	shop_interaction_button.visible = false
+	shop_interaction_button.pressed.connect(_toggle_shop_door)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
@@ -1077,6 +1134,16 @@ func _build_ui() -> void:
 	zoom_controls.add_child(zoom_out_button)
 	zoom_in_button.pressed.connect(_zoom_in)
 	zoom_out_button.pressed.connect(_zoom_out)
+
+
+func _toggle_shop_door() -> void:
+	if not is_instance_valid(shop_door_pivot):
+		return
+	shop_door_open = not shop_door_open
+	shop_door_pivot.rotation.y = -1.45 if shop_door_open else 0.0
+	shop_interaction_button.text = "CLOSE SHOP" if shop_door_open else "OPEN SHOP"
+	status_label.text = "SHOP OPEN  •  Walk inside" if shop_door_open else "SHOP CLOSED"
+
 
 func _toggle_steering_mode() -> void:
 	steering_mode = 1 - steering_mode
@@ -1365,7 +1432,14 @@ func _zoom_in() -> void:
 func _zoom_out() -> void:
 	camera_zoom = clampf(camera_zoom + 0.18, 0.25, 2.5)
 
-func _process(delta: float) -> void:
+	if not driving and is_instance_valid(shop_door_pivot) and is_instance_valid(shop_interaction_button):
+		var shop_distance := player.global_position.distance_to(shop_door_pivot.global_position + Vector3(1.0, 0.0, 0.0))
+		shop_interaction_button.visible = shop_distance < 4.0
+		if shop_distance >= 4.0:
+			shop_interaction_button.text = "OPEN SHOP" if not shop_door_open else "CLOSE SHOP"
+	else:
+		if is_instance_valid(shop_interaction_button):
+			shop_interaction_button.visible = false
 	if not mission_complete:
 		var actor_position := car.global_position if driving else player.global_position
 		if actor_position.distance_to(checkpoint.global_position) < 3.2:
