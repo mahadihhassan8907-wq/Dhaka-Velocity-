@@ -329,7 +329,7 @@ func _build_city() -> void:
 		for block_z in block_centres:
 			if absf(block_x) < 30.0 and absf(block_z) < 30.0:
 				continue
-			var block_seed := abs(int(block_x * 3.0 + block_z * 5.0))
+			var block_seed: int = abs(int(block_x * 3.0 + block_z * 5.0))
 			var first_height := 12.0 + float((block_seed * 7) % 19)
 			var second_height := 10.0 + float((block_seed * 11 + 5) % 17)
 			var first_color: Color = facade_palette[block_seed % facade_palette.size()]
