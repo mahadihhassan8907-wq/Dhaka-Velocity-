@@ -178,6 +178,7 @@ var mission_points: Array[Vector3] = [
 ]
 var mission_names: Array[String] = ["FIRST DRIVE", "NORTH GATE", "WEST AVENUE"]
 var traffic_cars: Array[Node3D] = []
+var pedestrians: Array[Dictionary] = []
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
@@ -215,6 +216,7 @@ func _ready() -> void:
 	_build_player()
 	_build_car()
 	_build_traffic()
+	_build_pedestrians()
 	_build_checkpoint()
 	_build_camera()
 	_build_ui()
@@ -411,6 +413,65 @@ func _build_city_streetlight(world_position: Vector3) -> void:
 	pole.material_override = _mat(Color(0.16, 0.18, 0.20))
 	lamp.add_child(pole)
 	_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
+
+
+func _build_pedestrians() -> void:
+	# Lightweight ambient pedestrians establish everyday city life on the sidewalks.
+	var pedestrian_specs: Array[Dictionary] = [
+		{"position": Vector3(-9.5, 0.0, -34.0), "axis": Vector3(0.0, 0.0, 1.0), "min": -43.0, "max": -19.0, "speed": 1.15, "jacket": Color(0.16, 0.38, 0.68), "pants": Color(0.12, 0.14, 0.18)},
+		{"position": Vector3(9.5, 0.0, 34.0), "axis": Vector3(0.0, 0.0, -1.0), "min": 19.0, "max": 43.0, "speed": 1.05, "jacket": Color(0.62, 0.25, 0.16), "pants": Color(0.18, 0.19, 0.22)},
+		{"position": Vector3(-34.0, 0.0, 9.5), "axis": Vector3(1.0, 0.0, 0.0), "min": -43.0, "max": -19.0, "speed": 1.0, "jacket": Color(0.18, 0.48, 0.32), "pants": Color(0.14, 0.16, 0.19)},
+		{"position": Vector3(34.0, 0.0, -9.5), "axis": Vector3(-1.0, 0.0, 0.0), "min": 19.0, "max": 43.0, "speed": 1.2, "jacket": Color(0.58, 0.48, 0.20), "pants": Color(0.15, 0.17, 0.20)},
+		{"position": Vector3(-57.5, 0.0, -34.0), "axis": Vector3(0.0, 0.0, 1.0), "min": -43.0, "max": -19.0, "speed": 0.95, "jacket": Color(0.48, 0.24, 0.50), "pants": Color(0.13, 0.15, 0.18)},
+		{"position": Vector3(57.5, 0.0, 34.0), "axis": Vector3(0.0, 0.0, -1.0), "min": 19.0, "max": 43.0, "speed": 1.1, "jacket": Color(0.20, 0.46, 0.54), "pants": Color(0.16, 0.16, 0.17)}
+	]
+	for spec in pedestrian_specs:
+		var pedestrian := CharacterBody3D.new()
+		pedestrian.name = "City_Pedestrian"
+		pedestrian.position = spec["position"]
+		var collision := CollisionShape3D.new()
+		var capsule := CapsuleShape3D.new()
+		capsule.radius = 0.28
+		capsule.height = 1.75
+		collision.shape = capsule
+		collision.position.y = 0.88
+		pedestrian.add_child(collision)
+		add_child(pedestrian)
+		_character_capsule(pedestrian, 0.25, 0.82, Vector3(0.0, 1.18, 0.0), spec["jacket"])
+		_character_sphere(pedestrian, 0.18, Vector3(0.0, 1.76, 0.0), Color(0.72, 0.55, 0.40))
+		var left_leg := _character_capsule(pedestrian, 0.115, 0.72, Vector3(-0.13, 0.48, 0.0), spec["pants"])
+		var right_leg := _character_capsule(pedestrian, 0.115, 0.72, Vector3(0.13, 0.48, 0.0), spec["pants"])
+		_character_capsule(pedestrian, 0.09, 0.62, Vector3(-0.31, 1.18, 0.0), spec["jacket"])
+		_character_capsule(pedestrian, 0.09, 0.62, Vector3(0.31, 1.18, 0.0), spec["jacket"])
+		pedestrians.append({
+			"body": pedestrian,
+			"axis": spec["axis"],
+			"min": spec["min"],
+			"max": spec["max"],
+			"speed": spec["speed"],
+			"left_leg": left_leg,
+			"right_leg": right_leg
+		})
+
+
+func _move_pedestrians(delta: float) -> void:
+	var walk_time := float(Time.get_ticks_msec()) * 0.001
+	for pedestrian in pedestrians:
+		var body := pedestrian["body"] as CharacterBody3D
+		var axis: Vector3 = pedestrian["axis"]
+		var coordinate := body.position.x if absf(axis.x) > 0.5 else body.position.z
+		if coordinate >= float(pedestrian["max"]):
+			axis = -axis
+		elif coordinate <= float(pedestrian["min"]):
+			axis = -axis
+		pedestrian["axis"] = axis
+		var walk_speed := float(pedestrian["speed"])
+		body.velocity = axis * walk_speed
+		body.move_and_slide()
+		var phase := sin(walk_time * walk_speed * 5.0) * 0.42
+		(pedestrian["left_leg"] as MeshInstance3D).rotation.x = phase
+		(pedestrian["right_leg"] as MeshInstance3D).rotation.x = -phase
+
 
 func _character_capsule(parent: Node3D, radius: float, height: float, pos: Vector3, color: Color) -> MeshInstance3D:
 	var mesh := CapsuleMesh.new()
@@ -1315,6 +1376,7 @@ func _move_traffic(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_move_traffic(delta)
+	_move_pedestrians(delta)
 	if driving:
 		var using_nitro := nitro_pressed and throttle_input > 0.0 and nitro_energy > 0.0 and not brake_pressed
 		if using_nitro:
