@@ -181,6 +181,7 @@ var traffic_cars: Array[Node3D] = []
 var pedestrians: Array[Dictionary] = []
 var interactive_shop_created := false
 var shop_door_pivot: Node3D
+var shop_entrance_position := Vector3.ZERO
 var shop_door_open := false
 var shop_interaction_button: Button
 var brake_lamps: Array[MeshInstance3D] = []
@@ -320,6 +321,9 @@ func _build_city() -> void:
 			_box(self, Vector3(0.16, 0.025, 4.2), Vector3(road_coordinate, 0.058, float(segment)), Color(0.92, 0.82, 0.38))
 			_box(self, Vector3(4.2, 0.025, 0.16), Vector3(float(segment), 0.058, road_coordinate), Color(0.92, 0.82, 0.38))
 
+	# Clearly marked enterable shop near the player's starting area.
+	_build_city_building(Vector3(-15.0, 0.0, 15.0), 13.0, 13.0, 18.0, Color(0.18, 0.38, 0.43), true)
+
 	# Populate the blocks around the central starting intersection.
 	# The centre stays open so the player, starter car and first checkpoints remain clear.
 	var block_centres: Array[float] = [-72.0, -24.0, 24.0, 72.0]
@@ -414,6 +418,7 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	var wall_thickness := 0.35
 	var door_width := 2.0
 	var front_z := -depth * 0.5
+	shop_entrance_position = building.to_global(Vector3(0.0, 0.0, front_z - 0.9))
 	_solid_box(building, Vector3(width, 0.22, depth), Vector3(0.0, 0.0, 0.0), Color(0.34, 0.31, 0.27))
 	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(-width * 0.5, wall_height * 0.5, 0.0), facade_color)
 	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(width * 0.5, wall_height * 0.5, 0.0), facade_color)
@@ -426,6 +431,15 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	var upper_height := maxf(1.0, height - wall_height)
 	_solid_box(building, Vector3(width, upper_height, depth), Vector3(0.0, wall_height + upper_height * 0.5, 0.0), facade_color)
 	_solid_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+	# High-contrast sign makes the one enterable shop easy to identify.
+	var shop_sign := Label3D.new()
+	shop_sign.text = "OPEN SHOP"
+	shop_sign.font_size = 64
+	shop_sign.position = Vector3(0.0, 3.0, front_z - 0.25)
+	shop_sign.modulate = Color(1.0, 0.78, 0.18)
+	shop_sign.outline_size = 12
+	shop_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	building.add_child(shop_sign)
 	# Door pivots from its left edge and swings inward when opened.
 	shop_door_pivot = Node3D.new()
 	shop_door_pivot.position = Vector3(-door_width * 0.5, 0.0, front_z - 0.12)
@@ -1434,8 +1448,8 @@ func _zoom_out() -> void:
 
 func _process(delta: float) -> void:
 	if not driving and is_instance_valid(shop_door_pivot) and is_instance_valid(shop_interaction_button):
-		var shop_distance := player.global_position.distance_to(shop_door_pivot.global_position + Vector3(1.0, 0.0, 0.0))
-		shop_interaction_button.visible = shop_distance < 4.0
+		var shop_distance := player.global_position.distance_to(shop_entrance_position)
+		shop_interaction_button.visible = shop_distance < 4.8
 		if shop_distance >= 4.0:
 			shop_interaction_button.text = "OPEN SHOP" if not shop_door_open else "CLOSE SHOP"
 	else:
