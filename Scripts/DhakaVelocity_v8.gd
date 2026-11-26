@@ -287,57 +287,65 @@ func _solid_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> vo
 	body.add_child(collision)
 
 func _build_city() -> void:
-	_solid_box(self, Vector3(100, 0.3, 100), Vector3(0, -0.2, 0), Color(0.20, 0.42, 0.25))
-	_solid_box(self, Vector3(12, 0.08, 100), Vector3(0, 0.0, 0), Color(0.12, 0.13, 0.15))
-	_solid_box(self, Vector3(100, 0.08, 12), Vector3(0, 0.01, 0), Color(0.12, 0.13, 0.15))
-	for x in [-28, -16, 16, 28]:
-		for z in [-28, -16, 16, 28]:
-			var height := 5.0 + float(abs(x + z) % 9)
-			_solid_box(self, Vector3(8, height, 8), Vector3(x, height / 2.0, z), Color(0.42, 0.48, 0.55))
-			_box(self, Vector3(8.2, 0.35, 8.2), Vector3(x, height + 0.12, z), Color(0.20, 0.28, 0.36))
-	_box(self, Vector3(1, 0.03, 90), Vector3(-3, 0.06, 0), Color(0.9, 0.82, 0.25))
-	_box(self, Vector3(1, 0.03, 90), Vector3(3, 0.06, 0), Color(0.9, 0.82, 0.25))
-	for z in range(-42, 45, 6):
-		_box(self, Vector3(0.18, 0.025, 2.5), Vector3(0, 0.065, z), Color(0.92, 0.92, 0.88))
-	for x in [-9, 9]:
-		for z in [-36, -18, 18, 36]:
-			_solid_box(self, Vector3(0.25, 4.5, 0.25), Vector3(x, 2.25, z), Color(0.18, 0.20, 0.22))
-			_box(self, Vector3(1.4, 0.18, 0.7), Vector3(x, 4.55, z), Color(0.95, 0.82, 0.42))
+	# First open-world district: a 260 m x 260 m connected street grid.
+	# Buildings use simple shared gameplay geometry for the mobile prototype;
+	# detailed interiors, NPC routines and streamed districts come in later phases.
+	_solid_box(self, Vector3(260.0, 0.3, 260.0), Vector3(0.0, -0.2, 0.0), Color(0.20, 0.42, 0.25))
 
-	# Raised sidewalks and curb strips around the two crossing roads.
-	for side in [-1.0, 1.0]:
-		_solid_box(self, Vector3(2.0, 0.16, 100.0), Vector3(side * 7.1, 0.04, 0.0), Color(0.48, 0.50, 0.51))
-		_solid_box(self, Vector3(100.0, 0.16, 2.0), Vector3(0.0, 0.04, side * 7.1), Color(0.48, 0.50, 0.51))
-		_box(self, Vector3(0.16, 0.12, 100.0), Vector3(side * 6.05, 0.10, 0.0), Color(0.78, 0.78, 0.72))
-		_box(self, Vector3(100.0, 0.12, 0.16), Vector3(0.0, 0.10, side * 6.05), Color(0.78, 0.78, 0.72))
+	var road_coordinates: Array[float] = [-96.0, -48.0, 0.0, 48.0, 96.0]
+	for road_coordinate in road_coordinates:
+		var road_width := 16.0 if is_zero_approx(road_coordinate) else 11.0
+		_solid_box(self, Vector3(road_width, 0.08, 260.0), Vector3(road_coordinate, 0.0, 0.0), Color(0.105, 0.115, 0.13))
+		_solid_box(self, Vector3(260.0, 0.08, road_width), Vector3(0.0, 0.01, road_coordinate), Color(0.105, 0.115, 0.13))
 
-	# Low-poly roadside trees and planted green islands.
-	for side in [-1.0, 1.0]:
-		for z in [-43.0, -31.0, -19.0, 19.0, 31.0, 43.0]:
-			var tree := Node3D.new()
-			tree.position = Vector3(side * 10.5, 0.0, z)
-			add_child(tree)
-			var trunk := MeshInstance3D.new()
-			var trunk_mesh := CylinderMesh.new()
-			trunk_mesh.top_radius = 0.16
-			trunk_mesh.bottom_radius = 0.23
-			trunk_mesh.height = 2.1
-			trunk.mesh = trunk_mesh
-			trunk.position.y = 1.05
-			trunk.material_override = _mat(Color(0.25, 0.14, 0.08))
-			tree.add_child(trunk)
-			for crown in [Vector3(0.0, 2.45, 0.0), Vector3(-0.34, 2.25, 0.05), Vector3(0.32, 2.28, -0.08)]:
-				var leaves := MeshInstance3D.new()
-				var leaf_mesh := SphereMesh.new()
-				leaf_mesh.radius = 0.82
-				leaf_mesh.height = 1.35
-				leaves.mesh = leaf_mesh
-				leaves.position = crown
-				leaves.material_override = _mat(Color(0.12, 0.34, 0.17))
-				tree.add_child(leaves)
-			_box(self, Vector3(2.0, 0.05, 2.0), Vector3(side * 10.5, 0.03, z), Color(0.18, 0.36, 0.19))
+		# Sidewalks and pale curb edges run along both sides of every road.
+		var sidewalk_offset := road_width * 0.5 + 1.5
+		for side in [-1.0, 1.0]:
+			_solid_box(self, Vector3(2.4, 0.16, 260.0), Vector3(road_coordinate + side * sidewalk_offset, 0.04, 0.0), Color(0.48, 0.50, 0.51))
+			_solid_box(self, Vector3(260.0, 0.16, 2.4), Vector3(0.0, 0.04, road_coordinate + side * sidewalk_offset), Color(0.48, 0.50, 0.51))
+			_box(self, Vector3(0.14, 0.10, 260.0), Vector3(road_coordinate + side * (road_width * 0.5 + 0.12), 0.10, 0.0), Color(0.78, 0.78, 0.72))
+			_box(self, Vector3(260.0, 0.10, 0.14), Vector3(0.0, 0.10, road_coordinate + side * (road_width * 0.5 + 0.12)), Color(0.78, 0.78, 0.72))
+
+	# Broken centre markings make the roads readable without filling the scene with detail.
+	for road_coordinate in road_coordinates:
+		for segment in range(-118, 119, 14):
+			if abs(segment) % 48 < 9:
+				continue
+			_box(self, Vector3(0.16, 0.025, 4.2), Vector3(road_coordinate, 0.058, float(segment)), Color(0.92, 0.82, 0.38))
+			_box(self, Vector3(4.2, 0.025, 0.16), Vector3(float(segment), 0.058, road_coordinate), Color(0.92, 0.82, 0.38))
+
+	# Populate the blocks around the central starting intersection.
+	# The centre stays open so the player, starter car and first checkpoints remain clear.
+	var block_centres: Array[float] = [-72.0, -24.0, 24.0, 72.0]
+	var facade_palette: Array[Color] = [
+		Color(0.55, 0.57, 0.59),
+		Color(0.68, 0.58, 0.46),
+		Color(0.43, 0.51, 0.59),
+		Color(0.70, 0.68, 0.61),
+		Color(0.49, 0.55, 0.48),
+		Color(0.62, 0.49, 0.43)
+	]
+	for block_x in block_centres:
+		for block_z in block_centres:
+			if absf(block_x) < 30.0 and absf(block_z) < 30.0:
+				continue
+			var block_seed := abs(int(block_x * 3.0 + block_z * 5.0))
+			var first_height := 12.0 + float((block_seed * 7) % 19)
+			var second_height := 10.0 + float((block_seed * 11 + 5) % 17)
+			var first_color: Color = facade_palette[block_seed % facade_palette.size()]
+			var second_color: Color = facade_palette[(block_seed + 3) % facade_palette.size()]
+			_build_city_building(Vector3(block_x - 7.0, 0.0, block_z - 7.0), 13.0, 13.0, first_height, first_color, block_seed % 3 == 0)
+			_build_city_building(Vector3(block_x + 7.0, 0.0, block_z + 7.0), 13.0, 13.0, second_height, second_color, block_seed % 4 == 0)
+
+	# Simple street furniture on the main avenues; these are visual landmarks for navigation.
+	for street_position in [-96.0, -48.0, 48.0, 96.0]:
+		_build_city_streetlight(Vector3(-10.5, 0.0, street_position))
+		_build_city_streetlight(Vector3(10.5, 0.0, street_position))
+		_build_city_streetlight(Vector3(street_position, 0.0, -10.5))
+		_build_city_streetlight(Vector3(street_position, 0.0, 10.5))
+
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55, -30, 0)
+	sun.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
 	sun.light_energy = 1.2
 	add_child(sun)
 	var environment := WorldEnvironment.new()
@@ -350,6 +358,59 @@ func _build_city() -> void:
 	world.ambient_light_sky_contribution = 0.35
 	environment.environment = world
 	add_child(environment)
+
+
+func _build_city_building(world_position: Vector3, width: float, depth: float, height: float, facade_color: Color, is_shop: bool) -> void:
+	var building := StaticBody3D.new()
+	building.name = "Shop_Building" if is_shop else "City_Building"
+	building.position = world_position
+	add_child(building)
+
+	var collision := CollisionShape3D.new()
+	var collision_shape := BoxShape3D.new()
+	collision_shape.size = Vector3(width, height, depth)
+	collision.position.y = height * 0.5
+	collision.shape = collision_shape
+	building.add_child(collision)
+
+	_box(building, Vector3(width, height, depth), Vector3(0.0, height * 0.5, 0.0), facade_color)
+	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+
+	# Repeated front windows create a readable multi-storey facade.
+	var floors := maxi(2, int(floor((height - 1.0) / 3.2)))
+	for floor_index in range(floors):
+		var window_y := 2.2 + float(floor_index) * 3.0
+		if window_y > height - 1.0:
+			continue
+		for window_index in range(3):
+			var window_x := -width * 0.32 + float(window_index) * width * 0.32
+			var glass := _box(building, Vector3(1.45, 1.35, 0.10), Vector3(window_x, window_y, -depth * 0.5 - 0.06), Color(0.10, 0.22, 0.31))
+			var glass_material := glass.material_override as StandardMaterial3D
+			if glass_material:
+				glass_material.metallic = 0.25
+				glass_material.roughness = 0.2
+
+	# A visible entrance is a future hook for the reusable interior/door interaction system.
+	_box(building, Vector3(1.55, 2.45, 0.12), Vector3(0.0, 1.23, -depth * 0.5 - 0.09), Color(0.16, 0.12, 0.09))
+	if is_shop:
+		_box(building, Vector3(width * 0.72, 0.75, 0.18), Vector3(0.0, 3.15, -depth * 0.5 - 0.10), Color(0.12, 0.34, 0.43))
+		_box(building, Vector3(width * 0.78, 0.16, 0.35), Vector3(0.0, 2.55, -depth * 0.5 - 0.18), Color(0.86, 0.56, 0.20))
+
+
+func _build_city_streetlight(world_position: Vector3) -> void:
+	var lamp := Node3D.new()
+	lamp.position = world_position
+	add_child(lamp)
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.07
+	pole_mesh.bottom_radius = 0.11
+	pole_mesh.height = 5.2
+	var pole := MeshInstance3D.new()
+	pole.mesh = pole_mesh
+	pole.position.y = 2.6
+	pole.material_override = _mat(Color(0.16, 0.18, 0.20))
+	lamp.add_child(pole)
+	_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
 
 func _character_capsule(parent: Node3D, radius: float, height: float, pos: Vector3, color: Color) -> MeshInstance3D:
 	var mesh := CapsuleMesh.new()
