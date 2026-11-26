@@ -461,8 +461,16 @@ func _move_pedestrians(delta: float) -> void:
 		var axis: Vector3 = pedestrian["axis"]
 		var coordinate := body.position.x if absf(axis.x) > 0.5 else body.position.z
 		if coordinate >= float(pedestrian["max"]):
+			if absf(axis.x) > 0.5:
+				body.position.x = float(pedestrian["max"])
+			else:
+				body.position.z = float(pedestrian["max"])
 			axis = -axis
 		elif coordinate <= float(pedestrian["min"]):
+			if absf(axis.x) > 0.5:
+				body.position.x = float(pedestrian["min"])
+			else:
+				body.position.z = float(pedestrian["min"])
 			axis = -axis
 		pedestrian["axis"] = axis
 		var walk_speed := float(pedestrian["speed"])
