@@ -62,7 +62,7 @@ class VirtualSteeringWheel extends Control:
 
 	
 func _process(delta: float) -> void:
-	time_of_day = fposmod(time_of_day + delta / 900.0, 1.0)
+	time_of_day = fposmod(time_of_day + delta / 2880.0, 1.0)
 	_update_day_night_visuals()
 	world_clock_refresh += delta
 	if world_clock_refresh >= 1.0:
