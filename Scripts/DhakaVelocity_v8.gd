@@ -1470,8 +1470,11 @@ func _advance_city_tour() -> void:
 	mission_index += 1
 	if mission_index >= mission_points.size():
 		mission_complete = true
+		cash_balance += 100
+		_refresh_wallet()
+		_save_game_settings()
 		mission_label.text = "CITY TOUR COMPLETE  •  3/3 checkpoints reached"
-		status_label.text = "Excellent driving! City Tour completed."
+		status_label.text = "CITY TOUR COMPLETE  •  $100 reward added to wallet!"
 		checkpoint.visible = false
 		return
 	checkpoint.global_position = mission_points[mission_index]
