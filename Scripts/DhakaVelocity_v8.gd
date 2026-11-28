@@ -1579,6 +1579,7 @@ func _go_to_character_home() -> void:
 	camera_yaw = 0.0
 	status_label.text = "HOME  •  Arrived at %s" % character_home_names[character_index]
 	life_menu_panel.visible = false
+	_save_game_settings()
 
 
 func _toggle_personal_mission() -> void:
@@ -1588,12 +1589,12 @@ func _toggle_personal_mission() -> void:
 	character_mission_active[index] = not character_mission_active[index]
 	if character_mission_active[index]:
 		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
+		var beacon_target: Vector3 = mission["target"]
 		status_label.text = "PERSONAL MISSION  •  %s" % mission["title"]
-		personal_mission_marker.global_position = Vector3(mission["target"].x, 0.18, mission["target"].z)
+		personal_mission_marker.global_position = Vector3(beacon_target.x, 0.18, beacon_target.z)
 		personal_mission_marker.visible = true
 	else:
 		personal_mission_marker.visible = false
-	else:
 		status_label.text = "Personal mission tracking paused"
 	_update_life_menu()
 	_save_game_settings()
@@ -1865,6 +1866,13 @@ func _cycle_character() -> void:
 	character_button.text = "CHAR: " + character_names[character_index]
 	status_label.text = "Switched to %s  •  Personal home and story updated" % character_names[character_index]
 	_update_life_menu()
+	if character_mission_active[character_index]:
+		var active_mission: Dictionary = _get_personal_missions(character_index)[character_mission_steps[character_index]]
+		var active_target: Vector3 = active_mission["target"]
+		personal_mission_marker.global_position = Vector3(active_target.x, 0.18, active_target.z)
+		personal_mission_marker.visible = true
+	else:
+		personal_mission_marker.visible = false
 	_save_game_settings()
 
 func _toggle_vehicle() -> void:
