@@ -1383,7 +1383,7 @@ func _build_ui() -> void:
 	home_rest_button.pressed.connect(_rest_at_home)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
-	mission_label.text = "FREE ROAM  •  Explore Dhaka"
+	mission_label.text = "FREE ROAM  •  %s's Dhaka" % character_names[character_index]
 	mission_label.position = Vector2(12, 38)
 	mission_label.add_theme_font_size_override("font_size", 16)
 	layer.add_child(mission_label)
