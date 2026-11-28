@@ -247,6 +247,7 @@ var life_character_label: Label
 var life_profile_label: Label
 var life_mission_label: Label
 var life_track_button: Button
+var home_rest_button: Button
 
 func _ready() -> void:
 	_load_saved_settings()
@@ -1372,6 +1373,14 @@ func _build_ui() -> void:
 	layer.add_child(shop_drink_button)
 	shop_drink_button.visible = false
 	shop_drink_button.pressed.connect(_drink_shop_water)
+	home_rest_button = _make_button("REST / SAVE", 156)
+	home_rest_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	home_rest_button.position = Vector2(-178, -394)
+	home_rest_button.size = Vector2(156, 48)
+	home_rest_button.custom_minimum_size = Vector2(156, 48)
+	layer.add_child(home_rest_button)
+	home_rest_button.visible = false
+	home_rest_button.pressed.connect(_rest_at_home)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
 	mission_label.text = "FREE ROAM  •  Explore Dhaka"
@@ -1565,7 +1574,7 @@ func _update_life_menu() -> void:
 	var missions := _get_personal_missions(index)
 	var step := character_mission_steps[index]
 	life_character_label.text = character_names[index] + "  •  " + character_home_names[index]
-	life_profile_label.text = _get_character_profile(index)
+	life_profile_label.text = _get_character_profile(index) + "\nPersonal funds: $%d" % cash_balance
 	if step >= missions.size():
 		life_mission_label.text = "STORY ARC COMPLETE  •  %d/3 personal missions finished" % character_mission_completed[index]
 		life_track_button.text = "PERSONAL STORY COMPLETE"
@@ -1575,6 +1584,19 @@ func _update_life_menu() -> void:
 		life_mission_label.text = "%s\n%s\nProgress: %d/3" % [mission["title"], mission["detail"], character_mission_completed[index]]
 		life_track_button.disabled = false
 		life_track_button.text = "STOP TRACKING" if character_mission_active[index] else "START PERSONAL MISSION"
+
+
+func _rest_at_home() -> void:
+	if driving:
+		return
+	if player.global_position.distance_to(character_home_positions[character_index]) >= 9.0:
+		status_label.text = "Move inside your own home to rest"
+		return
+	stamina = 100.0
+	if is_instance_valid(stamina_label):
+		stamina_label.text = "STAMINA  100%"
+	status_label.text = "HOME  •  Rested and progress saved"
+	_save_game_settings()
 
 
 func _go_to_character_home() -> void:
@@ -2023,6 +2045,8 @@ func _process(delta: float) -> void:
 			shop_purchase_button.visible = false
 	if is_instance_valid(shop_drink_button):
 		shop_drink_button.visible = not driving and water_bottles > 0
+	if is_instance_valid(home_rest_button):
+		home_rest_button.visible = not driving and player.global_position.distance_to(character_home_positions[character_index]) < 9.0
 	_update_personal_life()
 	character_autosave_timer += delta
 	if character_autosave_timer >= 15.0 and is_instance_valid(player):
