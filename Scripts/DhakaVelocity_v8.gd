@@ -238,6 +238,7 @@ var character_home_nodes: Array[Node3D] = []
 var character_world_positions: Array[Vector3] = [Vector3(-5, 1, 5), Vector3(112, 1, -119.5), Vector3(-112, 1, 104.5)]
 var character_cash: Array[int] = [250, 180, 320]
 var personal_mission_marker: MeshInstance3D
+var character_autosave_timer := 0.0
 var character_mission_steps: Array[int] = [0, 0, 0]
 var character_mission_active: Array[bool] = [false, false, false]
 var character_mission_completed: Array[int] = [0, 0, 0]
@@ -1591,11 +1592,13 @@ func _toggle_personal_mission() -> void:
 		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
 		var beacon_target: Vector3 = mission["target"]
 		status_label.text = "PERSONAL MISSION  •  %s" % mission["title"]
+		mission_label.text = "%s  •  %s" % [character_names[index], mission["detail"]]
 		personal_mission_marker.global_position = Vector3(beacon_target.x, 0.18, beacon_target.z)
 		personal_mission_marker.visible = true
 	else:
 		personal_mission_marker.visible = false
 		status_label.text = "Personal mission tracking paused"
+		mission_label.text = "FREE ROAM  •  %s's Dhaka" % character_names[index]
 	_update_life_menu()
 	_save_game_settings()
 
@@ -1865,6 +1868,7 @@ func _cycle_character() -> void:
 		character_visuals[index].visible = index == character_index
 	character_button.text = "CHAR: " + character_names[character_index]
 	status_label.text = "Switched to %s  •  Personal home and story updated" % character_names[character_index]
+	mission_label.text = "FREE ROAM  •  %s's Dhaka" % character_names[character_index]
 	_update_life_menu()
 	if character_mission_active[character_index]:
 		var active_mission: Dictionary = _get_personal_missions(character_index)[character_mission_steps[character_index]]
@@ -2013,6 +2017,11 @@ func _process(delta: float) -> void:
 	if is_instance_valid(shop_drink_button):
 		shop_drink_button.visible = not driving and water_bottles > 0
 	_update_personal_life()
+	character_autosave_timer += delta
+	if character_autosave_timer >= 15.0 and is_instance_valid(player):
+		character_autosave_timer = 0.0
+		character_world_positions[character_index] = player.global_position
+		_save_game_settings()
 func _move_traffic(delta: float) -> void:
 	for i in range(traffic_cars.size()):
 		var traffic := traffic_cars[i]
