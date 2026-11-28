@@ -342,19 +342,19 @@ func _build_city() -> void:
 	# First open-world district: a 260 m x 260 m connected street grid.
 	# Buildings use simple shared gameplay geometry for the mobile prototype;
 	# detailed interiors, NPC routines and streamed districts come in later phases.
-	_city_solid_city_box(self, Vector3(260.0, 0.3, 260.0), Vector3(0.0, -0.2, 0.0), Color(0.20, 0.42, 0.25))
+	_city_solid_box(self, Vector3(260.0, 0.3, 260.0), Vector3(0.0, -0.2, 0.0), Color(0.20, 0.42, 0.25))
 
 	var road_coordinates: Array[float] = [-96.0, -48.0, 0.0, 48.0, 96.0]
 	for road_coordinate in road_coordinates:
 		var road_width := 16.0 if is_zero_approx(road_coordinate) else 11.0
-		_city_solid_city_box(self, Vector3(road_width, 0.08, 260.0), Vector3(road_coordinate, 0.0, 0.0), Color(0.105, 0.115, 0.13))
-		_city_solid_city_box(self, Vector3(260.0, 0.08, road_width), Vector3(0.0, 0.01, road_coordinate), Color(0.105, 0.115, 0.13))
+		_city_solid_box(self, Vector3(road_width, 0.08, 260.0), Vector3(road_coordinate, 0.0, 0.0), Color(0.105, 0.115, 0.13))
+		_city_solid_box(self, Vector3(260.0, 0.08, road_width), Vector3(0.0, 0.01, road_coordinate), Color(0.105, 0.115, 0.13))
 
 		# Sidewalks and pale curb edges run along both sides of every road.
 		var sidewalk_offset := road_width * 0.5 + 1.5
 		for side in [-1.0, 1.0]:
-			_city_solid_city_box(self, Vector3(2.4, 0.16, 260.0), Vector3(road_coordinate + side * sidewalk_offset, 0.04, 0.0), Color(0.48, 0.50, 0.51))
-			_city_solid_city_box(self, Vector3(260.0, 0.16, 2.4), Vector3(0.0, 0.04, road_coordinate + side * sidewalk_offset), Color(0.48, 0.50, 0.51))
+			_city_solid_box(self, Vector3(2.4, 0.16, 260.0), Vector3(road_coordinate + side * sidewalk_offset, 0.04, 0.0), Color(0.48, 0.50, 0.51))
+			_city_solid_box(self, Vector3(260.0, 0.16, 2.4), Vector3(0.0, 0.04, road_coordinate + side * sidewalk_offset), Color(0.48, 0.50, 0.51))
 			_city_box(self, Vector3(0.14, 0.10, 260.0), Vector3(road_coordinate + side * (road_width * 0.5 + 0.12), 0.10, 0.0), Color(0.78, 0.78, 0.72))
 			_city_box(self, Vector3(260.0, 0.10, 0.14), Vector3(0.0, 0.10, road_coordinate + side * (road_width * 0.5 + 0.12)), Color(0.78, 0.78, 0.72))
 
