@@ -472,6 +472,21 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
 	_box(building, Vector3(0.9, 0.7, 0.65), Vector3(0.0, 1.0, -2.0), Color(0.12, 0.32, 0.38))
 	_box(building, Vector3(1.0, 0.08, 0.72), Vector3(0.0, 1.38, -2.0), Color(0.12, 0.16, 0.18))
+	# A simple shopkeeper stands behind the counter as a recognizable interior character.
+	var shopkeeper := Node3D.new()
+	shopkeeper.name = "Shopkeeper"
+	shopkeeper.position = Vector3(0.0, 0.0, 0.35)
+	building.add_child(shopkeeper)
+	_character_capsule(shopkeeper, 0.28, 0.92, Vector3(0.0, 1.18, 0.0), Color(0.18, 0.32, 0.52))
+	_character_sphere(shopkeeper, 0.19, Vector3(0.0, 1.82, 0.0), Color(0.66, 0.48, 0.34))
+	_character_capsule(shopkeeper, 0.085, 0.62, Vector3(-0.34, 1.20, 0.0), Color(0.18, 0.32, 0.52))
+	_character_capsule(shopkeeper, 0.085, 0.62, Vector3(0.34, 1.20, 0.0), Color(0.18, 0.32, 0.52))
+	var shop_light := OmniLight3D.new()
+	shop_light.position = Vector3(0.0, 3.0, -1.0)
+	shop_light.light_color = Color(1.0, 0.82, 0.58)
+	shop_light.light_energy = 1.35
+	shop_light.omni_range = 9.0
+	building.add_child(shop_light)
 	# Small, colorful stock on both shelves makes the shop feel stocked and readable.
 	var product_colors: Array[Color] = [
 		Color(0.12, 0.58, 0.88), Color(0.88, 0.24, 0.16),
