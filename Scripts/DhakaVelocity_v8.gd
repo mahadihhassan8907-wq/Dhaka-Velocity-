@@ -232,10 +232,22 @@ var character_button: Button
 var pause_menu_panel: PanelContainer
 var cheat_codes_button: Button
 var cheat_codes_enabled := false
+var character_home_positions: Array[Vector3] = [Vector3(-112, 0, -112), Vector3(112, 0, -112), Vector3(-112, 0, 112)]
+var character_home_names: Array[String] = ["MARCUS' FAMILY HOME", "FELIX' CITY APARTMENT", "DAMIAN'S RIVERSIDE HOUSE"]
+var character_home_nodes: Array[Node3D] = []
+var character_mission_steps: Array[int] = [0, 0, 0]
+var character_mission_active: Array[bool] = [false, false, false]
+var character_mission_completed: Array[int] = [0, 0, 0]
+var life_menu_panel: PanelContainer
+var life_character_label: Label
+var life_profile_label: Label
+var life_mission_label: Label
+var life_track_button: Button
 
 func _ready() -> void:
 	_load_saved_settings()
 	_build_city()
+	_build_character_homes()
 	_build_player()
 	_build_car()
 	_build_traffic()
@@ -271,6 +283,13 @@ func _load_saved_settings() -> void:
 	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
+	character_mission_steps = config.get_value("story", "mission_steps", character_mission_steps)
+	character_mission_active = config.get_value("story", "mission_active", character_mission_active)
+	character_mission_completed = config.get_value("story", "mission_completed", character_mission_completed)
+	for i in range(3):
+		character_mission_steps[i] = clampi(int(character_mission_steps[i]), 0, 3)
+		character_mission_active[i] = bool(character_mission_active[i]) and character_mission_steps[i] < 3
+		character_mission_completed[i] = clampi(int(character_mission_completed[i]), 0, 3)
 
 func _save_game_settings() -> void:
 	var config := ConfigFile.new()
@@ -286,6 +305,9 @@ func _save_game_settings() -> void:
 	config.set_value("economy", "cash", cash_balance)
 	config.set_value("economy", "water_bottles", water_bottles)
 	config.set_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled)
+	config.set_value("story", "mission_steps", character_mission_steps)
+	config.set_value("story", "mission_active", character_mission_active)
+	config.set_value("story", "mission_completed", character_mission_completed)
 	var error := config.save("user://dhaka_velocity.cfg")
 	if error != OK:
 		push_warning("Could not save Dhaka Velocity settings: %s" % error_string(error))
@@ -595,6 +617,58 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 			_box(building, Vector3(0.48, 0.48, 0.34), Vector3(product_x, 2.08, 0.72), product_color)
 			_box(building, Vector3(0.52, 0.08, 0.38), Vector3(product_x, 2.36, 0.72), Color(0.88, 0.88, 0.82))
 	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+
+
+func _build_character_homes() -> void:
+	# Three persistent personal homes. Open front entrances let the player walk inside.
+	var facade_colors: Array[Color] = [Color(0.64, 0.48, 0.36), Color(0.36, 0.48, 0.60), Color(0.48, 0.56, 0.40)]
+	var trim_colors: Array[Color] = [Color(0.22, 0.13, 0.09), Color(0.12, 0.18, 0.25), Color(0.17, 0.22, 0.14)]
+	for i in range(3):
+		var home := Node3D.new()
+		home.name = "Home_" + character_names[i]
+		home.position = character_home_positions[i]
+		add_child(home)
+		character_home_nodes.append(home)
+		var facade: Color = facade_colors[i]
+		var trim: Color = trim_colors[i]
+		_solid_box(home, Vector3(10.0, 0.22, 8.0), Vector3(0, 0.11, 0), Color(0.34, 0.32, 0.28))
+		_solid_box(home, Vector3(10.0, 3.2, 0.28), Vector3(0, 1.72, 3.86), facade)
+		_solid_box(home, Vector3(0.28, 3.2, 8.0), Vector3(-4.86, 1.72, 0), facade)
+		_solid_box(home, Vector3(0.28, 3.2, 8.0), Vector3(4.86, 1.72, 0), facade)
+		_solid_box(home, Vector3(3.65, 3.2, 0.28), Vector3(-3.12, 1.72, -3.86), facade)
+		_solid_box(home, Vector3(3.65, 3.2, 0.28), Vector3(3.12, 1.72, -3.86), facade)
+		_solid_box(home, Vector3(10.0, 0.28, 8.0), Vector3(0, 3.36, 0), trim)
+		_box(home, Vector3(1.6, 2.8, 0.12), Vector3(0, 1.48, -3.98), trim)
+		_box(home, Vector3(1.35, 2.45, 0.08), Vector3(0, 1.42, -4.06), Color(0.42, 0.25, 0.14))
+		_box(home, Vector3(1.5, 0.12, 0.12), Vector3(0, 2.75, -4.08), Color(0.85, 0.72, 0.42))
+		for side in [-1.0, 1.0]:
+			_box(home, Vector3(1.35, 1.15, 0.10), Vector3(side * 3.1, 2.0, -4.04), Color(0.30, 0.58, 0.72))
+			_box(home, Vector3(1.48, 0.12, 0.16), Vector3(side * 3.1, 2.0, -4.12), trim)
+			_box(home, Vector3(0.12, 1.28, 0.16), Vector3(side * 3.1, 2.0, -4.12), trim)
+		_box(home, Vector3(2.3, 0.48, 1.2), Vector3(-2.7, 0.42, 1.9), Color(0.25, 0.20, 0.17) if i == 0 else Color(0.18, 0.22, 0.28))
+		_box(home, Vector3(2.0, 0.18, 1.0), Vector3(2.5, 0.72, 1.6), Color(0.46, 0.34, 0.22))
+		_box(home, Vector3(1.35, 0.18, 0.75), Vector3(2.5, 0.9, 1.6), Color(0.72, 0.66, 0.54))
+		var lamp := OmniLight3D.new()
+		lamp.position = Vector3(0, 2.8, 0)
+		lamp.light_color = Color(1.0, 0.78, 0.52) if i != 1 else Color(0.70, 0.82, 1.0)
+		lamp.light_energy = 0.55
+		lamp.omni_range = 8.0
+		home.add_child(lamp)
+		var sign := Label3D.new()
+		sign.text = character_home_names[i]
+		sign.position = Vector3(0, 4.2, -4.6)
+		sign.font_size = 30
+		sign.modulate = Color(1.0, 0.88, 0.55)
+		home.add_child(sign)
+		var marker_mesh := CylinderMesh.new()
+		marker_mesh.top_radius = 1.5
+		marker_mesh.bottom_radius = 1.5
+		marker_mesh.height = 0.06
+		var marker := MeshInstance3D.new()
+		marker.mesh = marker_mesh
+		marker.position = Vector3(0, 0.04, -7.0)
+		marker.material_override = _mat(Color(0.12, 0.78, 0.55, 0.65))
+		home.add_child(marker)
 
 
 func _build_city_streetlight(world_position: Vector3) -> void:
@@ -1314,6 +1388,7 @@ func _build_ui() -> void:
 	zoom_in_button.pressed.connect(_zoom_in)
 	zoom_out_button.pressed.connect(_zoom_out)
 	_build_pause_menu(layer)
+	_build_life_menu(layer)
 
 
 func _build_pause_menu(layer: CanvasLayer) -> void:
@@ -1361,6 +1436,159 @@ func _build_pause_menu(layer: CanvasLayer) -> void:
 	menu_content.add_child(close_button)
 	close_button.pressed.connect(_toggle_pause_menu)
 	_update_cheat_codes_button()
+
+
+func _build_life_menu(layer: CanvasLayer) -> void:
+	var life_button := _make_button("LIFE / MISSIONS", 148)
+	life_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	life_button.position = Vector2(12, 112)
+	life_button.size = Vector2(148, 42)
+	life_button.custom_minimum_size = Vector2(148, 42)
+	layer.add_child(life_button)
+	life_button.pressed.connect(_toggle_life_menu)
+	life_menu_panel = PanelContainer.new()
+	life_menu_panel.set_anchors_preset(Control.PRESET_CENTER)
+	life_menu_panel.position = Vector2(-180, -170)
+	life_menu_panel.size = Vector2(360, 340)
+	life_menu_panel.custom_minimum_size = Vector2(360, 340)
+	life_menu_panel.visible = false
+	life_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(life_menu_panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	life_menu_panel.add_child(content)
+	var heading := Label.new()
+	heading.text = "PERSONAL LIFE"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 22)
+	content.add_child(heading)
+	life_character_label = Label.new()
+	life_character_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	life_character_label.add_theme_font_size_override("font_size", 18)
+	content.add_child(life_character_label)
+	life_profile_label = Label.new()
+	life_profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	life_profile_label.custom_minimum_size.y = 48
+	content.add_child(life_profile_label)
+	life_mission_label = Label.new()
+	life_mission_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	life_mission_label.custom_minimum_size.y = 78
+	content.add_child(life_mission_label)
+	var home_button := _make_button("GO TO MY HOME", 300)
+	content.add_child(home_button)
+	home_button.pressed.connect(_go_to_character_home)
+	life_track_button = _make_button("START PERSONAL MISSION", 300)
+	content.add_child(life_track_button)
+	life_track_button.pressed.connect(_toggle_personal_mission)
+	var close_button := _make_button("CLOSE", 300)
+	content.add_child(close_button)
+	close_button.pressed.connect(_toggle_life_menu)
+	_update_life_menu()
+
+
+func _toggle_life_menu() -> void:
+	if driving:
+		status_label.text = "Exit the vehicle before opening Personal Life"
+		return
+	life_menu_panel.visible = not life_menu_panel.visible
+	_update_life_menu()
+
+
+func _get_character_profile(index: int) -> String:
+	match index:
+		0:
+			return "Family man • protects his neighbourhood • steady driver"
+		1:
+			return "Ambitious street racer • quick on foot • chasing a new start"
+		_:
+			return "Independent fixer • lives by his own rules • tough and patient"
+
+
+func _get_personal_missions(index: int) -> Array[Dictionary]:
+	match index:
+		0:
+			return [
+				{"title": "A FAMILY FAVOUR", "detail": "Visit the local shop and collect a family parcel.", "target": Vector3(-15, 0, 15), "reward": 120},
+				{"title": "NORTH SIDE DELIVERY", "detail": "Take the parcel to the north avenue meeting point.", "target": Vector3(0, 0, -96), "reward": 180},
+				{"title": "BACK HOME", "detail": "Return home and check that your family is safe.", "target": character_home_positions[0] + Vector3(0, 0, 7), "reward": 250}
+			]
+		1:
+			return [
+				{"title": "RACER'S CALL", "detail": "Meet your racing contact at the central junction.", "target": Vector3(0, 0, 0), "reward": 140},
+				{"title": "TEST RUN", "detail": "Drive or travel to the east avenue checkpoint.", "target": Vector3(96, 0, 0), "reward": 220},
+				{"title": "COOL DOWN", "detail": "Head back to your city apartment.", "target": character_home_positions[1] + Vector3(0, 0, 7), "reward": 280}
+			]
+		_:
+			return [
+				{"title": "OLD DEBT", "detail": "Find the contact on the west side of the district.", "target": Vector3(-96, 0, 0), "reward": 160},
+				{"title": "QUIET PICKUP", "detail": "Reach the south avenue and collect the hidden package.", "target": Vector3(0, 0, 96), "reward": 240},
+				{"title": "SAFE HOUSE", "detail": "Return to your own house to finish the job.", "target": character_home_positions[2] + Vector3(0, 0, 7), "reward": 320}
+
+
+func _update_life_menu() -> void:
+	if not is_instance_valid(life_character_label):
+		return
+	var index := character_index
+	var missions := _get_personal_missions(index)
+	var step := character_mission_steps[index]
+	life_character_label.text = character_names[index] + "  •  " + character_home_names[index]
+	life_profile_label.text = _get_character_profile(index)
+	if step >= missions.size():
+		life_mission_label.text = "STORY ARC COMPLETE  •  %d/3 personal missions finished" % character_mission_completed[index]
+		life_track_button.text = "PERSONAL STORY COMPLETE"
+		life_track_button.disabled = true
+	else:
+		var mission: Dictionary = missions[step]
+		life_mission_label.text = "%s\n%s\nProgress: %d/3" % [mission["title"], mission["detail"], character_mission_completed[index]]
+		life_track_button.disabled = false
+		life_track_button.text = "STOP TRACKING" if character_mission_active[index] else "START PERSONAL MISSION"
+
+
+func _go_to_character_home() -> void:
+	if driving:
+		status_label.text = "Exit the car before travelling home"
+		return
+	player.global_position = character_home_positions[character_index] + Vector3(0, 0.2, 7)
+	player.velocity = Vector3.ZERO
+	camera_yaw = 0.0
+	status_label.text = "HOME  •  Arrived at %s" % character_home_names[character_index]
+	life_menu_panel.visible = false
+
+
+func _toggle_personal_mission() -> void:
+	var index := character_index
+	if character_mission_steps[index] >= 3:
+		return
+	character_mission_active[index] = not character_mission_active[index]
+	if character_mission_active[index]:
+		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
+		status_label.text = "PERSONAL MISSION  •  %s" % mission["title"]
+	else:
+		status_label.text = "Personal mission tracking paused"
+	_update_life_menu()
+	_save_game_settings()
+
+
+func _update_personal_life() -> void:
+	if driving:
+		return
+	for index in range(3):
+		if not character_mission_active[index] or character_mission_steps[index] >= 3:
+			continue
+		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
+		var target: Vector3 = mission["target"]
+		if player.global_position.distance_to(target) <= 5.5:
+			var reward := int(mission["reward"])
+			character_mission_steps[index] += 1
+			character_mission_completed[index] += 1
+			character_mission_active[index] = false
+			if index == character_index:
+				cash_balance += reward
+				_refresh_wallet()
+				status_label.text = "MISSION COMPLETE  •  %s  •  +$%d" % [mission["title"], reward]
+				mission_label.text = "%s  •  PERSONAL STORY %d/3" % [character_names[index], character_mission_completed[index]]
+			_update_life_menu()
+			_save_game_settings()
 
 
 func _toggle_pause_menu() -> void:
@@ -1594,7 +1822,8 @@ func _cycle_character() -> void:
 	for index in range(character_visuals.size()):
 		character_visuals[index].visible = index == character_index
 	character_button.text = "CHAR: " + character_names[character_index]
-	status_label.text = "Selected character: %s  •  Same abilities and controls" % character_names[character_index]
+	status_label.text = "Switched to %s  •  Personal home and story updated" % character_names[character_index]
+	_update_life_menu()
 	_save_game_settings()
 
 func _toggle_vehicle() -> void:
@@ -1734,6 +1963,7 @@ func _process(delta: float) -> void:
 			shop_purchase_button.visible = false
 	if is_instance_valid(shop_drink_button):
 		shop_drink_button.visible = not driving and water_bottles > 0
+	_update_personal_life()
 func _move_traffic(delta: float) -> void:
 	for i in range(traffic_cars.size()):
 		var traffic := traffic_cars[i]
@@ -1835,7 +2065,9 @@ func _physics_process(delta: float) -> void:
 			stamina = minf(100.0, stamina + 12.0 * delta)
 		if is_instance_valid(stamina_label):
 			stamina_label.text = "STAMINA  %d%%" % int(stamina)
-		var walk_speed := 7.0 if run_pressed and stamina > 0.0 else 4.5
+		var base_walk_speed := [4.5, 5.0, 4.2][character_index]
+		var sprint_speed := [7.0, 8.0, 7.5][character_index]
+		var walk_speed := sprint_speed if run_pressed and stamina > 0.0 else base_walk_speed
 		player.velocity.x = direction.x * walk_speed
 		player.velocity.z = direction.z * walk_speed
 		if direction.length_squared() > 0.001:
