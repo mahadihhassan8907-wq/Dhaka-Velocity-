@@ -235,7 +235,7 @@ var cheat_codes_enabled := false
 var character_home_positions: Array[Vector3] = [Vector3(-112, 0, -112), Vector3(112, 0, -112), Vector3(-112, 0, 112)]
 var character_home_names: Array[String] = ["MARCUS' FAMILY HOME", "FELIX' CITY APARTMENT", "DAMIAN'S RIVERSIDE HOUSE"]
 var character_home_nodes: Array[Node3D] = []
-var character_world_positions: Array[Vector3] = [Vector3(-5, 1, 5), Vector3(112, 0.2, -119), Vector3(-112, 0.2, 119)]
+var character_world_positions: Array[Vector3] = [Vector3(-5, 1, 5), Vector3(112, 1, -119.5), Vector3(-112, 1, 104.5)]
 var character_mission_steps: Array[int] = [0, 0, 0]
 var character_mission_active: Array[bool] = [false, false, false]
 var character_mission_completed: Array[int] = [0, 0, 0]
@@ -784,7 +784,7 @@ func _character_sphere(parent: Node3D, radius: float, pos: Vector3, color: Color
 func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
-	player.position = Vector3(-5, 1, 5)
+	player.position = character_world_positions[character_index]
 	add_child(player)
 
 	# Marcus: first visual pass of the approved black-jacket outfit.
@@ -1553,7 +1553,7 @@ func _go_to_character_home() -> void:
 	if driving:
 		status_label.text = "Exit the car before travelling home"
 		return
-	player.global_position = character_home_positions[character_index] + Vector3(0, 0.2, -7.5)
+	player.global_position = character_home_positions[character_index] + Vector3(0, 1.0, -7.5)
 	player.velocity = Vector3.ZERO
 	camera_yaw = 0.0
 	status_label.text = "HOME  •  Arrived at %s" % character_home_names[character_index]
@@ -1581,7 +1581,7 @@ func _update_personal_life() -> void:
 	if not character_mission_active[index] or character_mission_steps[index] >= 3:
 		return
 	var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
-		var target: Vector3 = mission["target"]
+	var target: Vector3 = mission["target"]
 	if player.global_position.distance_to(target) <= 5.5:
 		var reward := int(mission["reward"])
 		character_mission_steps[index] += 1
