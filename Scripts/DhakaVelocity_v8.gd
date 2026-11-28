@@ -1475,9 +1475,9 @@ func _build_pause_menu(layer: CanvasLayer) -> void:
 
 	pause_menu_panel = PanelContainer.new()
 	pause_menu_panel.set_anchors_preset(Control.PRESET_CENTER)
-	pause_menu_panel.position = Vector2(-165, -145)
-	pause_menu_panel.size = Vector2(330, 290)
-	pause_menu_panel.custom_minimum_size = Vector2(330, 290)
+	pause_menu_panel.position = Vector2(-165, -180)
+	pause_menu_panel.size = Vector2(330, 360)
+	pause_menu_panel.custom_minimum_size = Vector2(330, 360)
 	pause_menu_panel.visible = false
 	pause_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(pause_menu_panel)
