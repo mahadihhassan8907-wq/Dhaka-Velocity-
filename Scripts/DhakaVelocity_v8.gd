@@ -126,6 +126,11 @@ class VirtualMoveJoystick extends Control:
 		draw_circle(center + direction * radius * 0.58, radius * 0.34, Color(0.22, 0.72, 0.9, 0.82))
 
 var city_material_cache: Dictionary = {}
+var city_box_mesh_cache: Dictionary = {}
+var city_tank_mesh: CylinderMesh
+var city_tank_lid_mesh: CylinderMesh
+var city_tank_pipe_mesh: CylinderMesh
+var city_streetlight_pole_mesh: CylinderMesh
 
 var player: CharacterBody3D
 var car: CharacterBody3D
@@ -317,8 +322,12 @@ func _city_material(color: Color) -> StandardMaterial3D:
 
 
 func _city_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
-	var mesh := BoxMesh.new()
-	mesh.size = size
+	var mesh_key := str(size)
+	var mesh := city_box_mesh_cache.get(mesh_key) as BoxMesh
+	if mesh == null:
+		mesh = BoxMesh.new()
+		mesh.size = size
+		city_box_mesh_cache[mesh_key] = mesh
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.position = pos
@@ -463,40 +472,43 @@ func _build_rooftop_water_tank(building: StaticBody3D, width: float, depth: floa
 	var tank_x := -width * 0.22
 	var tank_z := depth * 0.12
 	var roof_y := height + 0.42
-	var support_material := _mat(Color(0.24, 0.27, 0.29))
-	var tank_material := _mat(Color(0.075, 0.19, 0.22))
+	var support_material := _city_material(Color(0.24, 0.27, 0.29))
+	var tank_material := _city_material(Color(0.075, 0.19, 0.22))
 	tank_material.roughness = 0.48
-	var lid_material := _mat(Color(0.16, 0.27, 0.29))
+	var lid_material := _city_material(Color(0.16, 0.27, 0.29))
 	lid_material.roughness = 0.38
 	for x_side in [-1.0, 1.0]:
 		for z_side in [-1.0, 1.0]:
 			_city_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
-	var tank_mesh := CylinderMesh.new()
-	tank_mesh.top_radius = 0.92
-	tank_mesh.bottom_radius = 0.92
-	tank_mesh.height = 1.58
+	if city_tank_mesh == null:
+		city_tank_mesh = CylinderMesh.new()
+		city_tank_mesh.top_radius = 0.92
+		city_tank_mesh.bottom_radius = 0.92
+		city_tank_mesh.height = 1.58
 	var tank := MeshInstance3D.new()
 	tank.name = "Rooftop_Water_Tank"
-	tank.mesh = tank_mesh
+	tank.mesh = city_tank_mesh
 	tank.position = Vector3(tank_x, roof_y + 1.42, tank_z)
 	tank.material_override = tank_material
 	building.add_child(tank)
-	var lid_mesh := CylinderMesh.new()
-	lid_mesh.top_radius = 0.98
-	lid_mesh.bottom_radius = 0.98
-	lid_mesh.height = 0.12
+	if city_tank_lid_mesh == null:
+		city_tank_lid_mesh = CylinderMesh.new()
+		city_tank_lid_mesh.top_radius = 0.98
+		city_tank_lid_mesh.bottom_radius = 0.98
+		city_tank_lid_mesh.height = 0.12
 	var lid := MeshInstance3D.new()
-	lid.mesh = lid_mesh
+	lid.mesh = city_tank_lid_mesh
 	lid.position = Vector3(tank_x, roof_y + 2.25, tank_z)
 	lid.material_override = lid_material
 	building.add_child(lid)
 	# A short outlet pipe makes the rooftop silhouette less box-like.
-	var pipe_mesh := CylinderMesh.new()
-	pipe_mesh.top_radius = 0.055
-	pipe_mesh.bottom_radius = 0.055
-	pipe_mesh.height = 0.72
+	if city_tank_pipe_mesh == null:
+		city_tank_pipe_mesh = CylinderMesh.new()
+		city_tank_pipe_mesh.top_radius = 0.055
+		city_tank_pipe_mesh.bottom_radius = 0.055
+		city_tank_pipe_mesh.height = 0.72
 	var pipe := MeshInstance3D.new()
-	pipe.mesh = pipe_mesh
+	pipe.mesh = city_tank_pipe_mesh
 	pipe.rotation.x = PI * 0.5
 	pipe.position = Vector3(tank_x, roof_y + 0.98, tank_z - 0.94)
 	pipe.material_override = support_material
@@ -584,14 +596,15 @@ func _build_city_streetlight(world_position: Vector3) -> void:
 	var lamp := Node3D.new()
 	lamp.position = world_position
 	add_child(lamp)
-	var pole_mesh := CylinderMesh.new()
-	pole_mesh.top_radius = 0.07
-	pole_mesh.bottom_radius = 0.11
-	pole_mesh.height = 5.2
+	if city_streetlight_pole_mesh == null:
+		city_streetlight_pole_mesh = CylinderMesh.new()
+		city_streetlight_pole_mesh.top_radius = 0.07
+		city_streetlight_pole_mesh.bottom_radius = 0.11
+		city_streetlight_pole_mesh.height = 5.2
 	var pole := MeshInstance3D.new()
-	pole.mesh = pole_mesh
+	pole.mesh = city_streetlight_pole_mesh
 	pole.position.y = 2.6
-	pole.material_override = _mat(Color(0.16, 0.18, 0.20))
+	pole.material_override = _city_material(Color(0.16, 0.18, 0.20))
 	lamp.add_child(pole)
 	_city_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
 
