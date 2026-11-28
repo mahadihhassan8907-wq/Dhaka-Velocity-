@@ -148,6 +148,7 @@ var time_of_day := 0.36
 var day_night_button: Button
 var city_street_lights: Array[OmniLight3D] = []
 var home_interior_lights: Array[OmniLight3D] = []
+var night_lighting_state := -1
 var world_clock_label: Label
 var world_clock_refresh := 0.0
 var world_time_save_refresh := 0.0
@@ -1764,10 +1765,13 @@ func _update_day_night_visuals() -> void:
 	city_environment.ambient_light_color = Color(0.12, 0.17, 0.30).lerp(Color(0.62, 0.68, 0.76), daylight)
 	city_environment.ambient_light_energy = lerpf(0.28, 0.88, daylight)
 	city_environment.ambient_light_sky_contribution = lerpf(0.12, 0.38, daylight)
-	for street_light in city_street_lights:
-		street_light.visible = night_factor > 0.62
-	for home_light in home_interior_lights:
-		home_light.visible = night_factor > 0.62
+	var desired_night_lighting := 1 if night_factor > 0.62 else 0
+	if desired_night_lighting != night_lighting_state:
+		for street_light in city_street_lights:
+			street_light.visible = desired_night_lighting == 1
+		for home_light in home_interior_lights:
+			home_light.visible = desired_night_lighting == 1
+		night_lighting_state = desired_night_lighting
 	if is_instance_valid(day_night_button):
 		_update_day_night_button()
 
