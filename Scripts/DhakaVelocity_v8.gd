@@ -236,6 +236,8 @@ var character_home_positions: Array[Vector3] = [Vector3(-112, 0, -112), Vector3(
 var character_home_names: Array[String] = ["MARCUS' FAMILY HOME", "FELIX' CITY APARTMENT", "DAMIAN'S RIVERSIDE HOUSE"]
 var character_home_nodes: Array[Node3D] = []
 var character_world_positions: Array[Vector3] = [Vector3(-5, 1, 5), Vector3(112, 1, -119.5), Vector3(-112, 1, 104.5)]
+var character_cash: Array[int] = [250, 180, 320]
+var personal_mission_marker: MeshInstance3D
 var character_mission_steps: Array[int] = [0, 0, 0]
 var character_mission_active: Array[bool] = [false, false, false]
 var character_mission_completed: Array[int] = [0, 0, 0]
@@ -282,6 +284,13 @@ func _load_saved_settings() -> void:
 	steering_mode = clampi(int(config.get_value("controls", "steering_mode", steering_mode)), 0, 1)
 	character_index = clampi(int(config.get_value("characters", "selected", character_index)), 0, 2)
 	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
+	if config.has_section_key("characters", "cash_balances"):
+		character_cash = config.get_value("characters", "cash_balances", character_cash)
+		for i in range(3):
+			character_cash[i] = maxi(0, int(character_cash[i]))
+		cash_balance = character_cash[character_index]
+	else:
+		character_cash[character_index] = cash_balance
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
 	character_world_positions = config.get_value("characters", "world_positions", character_world_positions)
@@ -307,6 +316,8 @@ func _save_game_settings() -> void:
 	if is_instance_valid(player):
 		character_world_positions[character_index] = player.global_position
 	config.set_value("characters", "world_positions", character_world_positions)
+	character_cash[character_index] = cash_balance
+	config.set_value("characters", "cash_balances", character_cash)
 	config.set_value("economy", "cash", cash_balance)
 	config.set_value("economy", "water_bottles", water_bottles)
 	config.set_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled)
@@ -1489,6 +1500,16 @@ func _build_life_menu(layer: CanvasLayer) -> void:
 	content.add_child(close_button)
 	close_button.pressed.connect(_toggle_life_menu)
 	_update_life_menu()
+	personal_mission_marker = MeshInstance3D.new()
+	personal_mission_marker.name = "PersonalMissionBeacon"
+	var beacon_mesh := CylinderMesh.new()
+	beacon_mesh.top_radius = 1.45
+	beacon_mesh.bottom_radius = 1.45
+	beacon_mesh.height = 0.12
+	personal_mission_marker.mesh = beacon_mesh
+	personal_mission_marker.material_override = _mat(Color(1.0, 0.72, 0.12))
+	personal_mission_marker.visible = false
+	add_child(personal_mission_marker)
 
 
 func _toggle_life_menu() -> void:
@@ -1568,6 +1589,10 @@ func _toggle_personal_mission() -> void:
 	if character_mission_active[index]:
 		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
 		status_label.text = "PERSONAL MISSION  •  %s" % mission["title"]
+		personal_mission_marker.global_position = Vector3(mission["target"].x, 0.18, mission["target"].z)
+		personal_mission_marker.visible = true
+	else:
+		personal_mission_marker.visible = false
 	else:
 		status_label.text = "Personal mission tracking paused"
 	_update_life_menu()
@@ -1582,11 +1607,16 @@ func _update_personal_life() -> void:
 		return
 	var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
 	var target: Vector3 = mission["target"]
+	if is_instance_valid(personal_mission_marker):
+		personal_mission_marker.global_position = Vector3(target.x, 0.18, target.z)
+		personal_mission_marker.visible = true
 	if player.global_position.distance_to(target) <= 5.5:
 		var reward := int(mission["reward"])
 		character_mission_steps[index] += 1
 		character_mission_completed[index] += 1
 		character_mission_active[index] = false
+		if is_instance_valid(personal_mission_marker):
+			personal_mission_marker.visible = false
 		cash_balance += reward
 		_refresh_wallet()
 		status_label.text = "MISSION COMPLETE  •  %s  •  +$%d" % [mission["title"], reward]
@@ -1823,7 +1853,10 @@ func _cycle_character() -> void:
 	if driving:
 		return
 	character_world_positions[character_index] = player.global_position
+	character_cash[character_index] = cash_balance
 	character_index = (character_index + 1) % character_names.size()
+	cash_balance = character_cash[character_index]
+	_refresh_wallet()
 	player.global_position = character_world_positions[character_index]
 	player.velocity = Vector3.ZERO
 	camera_yaw = 0.0
