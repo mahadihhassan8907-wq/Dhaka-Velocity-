@@ -229,6 +229,9 @@ var character_index := 0
 var character_names: Array[String] = ["MARCUS", "FELIX", "DAMIAN"]
 var character_visuals: Array[Node3D] = []
 var character_button: Button
+var pause_menu_panel: PanelContainer
+var cheat_codes_button: Button
+var cheat_codes_enabled := false
 
 func _ready() -> void:
 	_load_saved_settings()
@@ -267,6 +270,7 @@ func _load_saved_settings() -> void:
 	character_index = clampi(int(config.get_value("characters", "selected", character_index)), 0, 2)
 	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
+	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
 
 func _save_game_settings() -> void:
 	var config := ConfigFile.new()
@@ -281,6 +285,7 @@ func _save_game_settings() -> void:
 	config.set_value("characters", "selected", character_index)
 	config.set_value("economy", "cash", cash_balance)
 	config.set_value("economy", "water_bottles", water_bottles)
+	config.set_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled)
 	var error := config.save("user://dhaka_velocity.cfg")
 	if error != OK:
 		push_warning("Could not save Dhaka Velocity settings: %s" % error_string(error))
@@ -1114,6 +1119,7 @@ func _build_camera() -> void:
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(layer)
 	var panel := GridContainer.new()
 	panel.columns = 3
@@ -1307,6 +1313,82 @@ func _build_ui() -> void:
 	zoom_controls.add_child(zoom_out_button)
 	zoom_in_button.pressed.connect(_zoom_in)
 	zoom_out_button.pressed.connect(_zoom_out)
+	_build_pause_menu(layer)
+
+
+func _build_pause_menu(layer: CanvasLayer) -> void:
+	var pause_button := _make_button("PAUSE", 104)
+	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	pause_button.position = Vector2(-116, 8)
+	pause_button.size = Vector2(108, 40)
+	pause_button.custom_minimum_size = Vector2(108, 40)
+	layer.add_child(pause_button)
+	pause_button.pressed.connect(_toggle_pause_menu)
+
+	pause_menu_panel = PanelContainer.new()
+	pause_menu_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_menu_panel.position = Vector2(-165, -145)
+	pause_menu_panel.size = Vector2(330, 290)
+	pause_menu_panel.custom_minimum_size = Vector2(330, 290)
+	pause_menu_panel.visible = false
+	pause_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(pause_menu_panel)
+
+	var menu_content := VBoxContainer.new()
+	menu_content.add_theme_constant_override("separation", 12)
+	pause_menu_panel.add_child(menu_content)
+	var title := Label.new()
+	title.text = "GAME PAUSED"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	menu_content.add_child(title)
+
+	var resume_button := _make_button("RESUME GAME", 280)
+	menu_content.add_child(resume_button)
+	resume_button.pressed.connect(_toggle_pause_menu)
+
+	cheat_codes_button = _make_button("CHEAT CODES: OFF", 280)
+	menu_content.add_child(cheat_codes_button)
+	cheat_codes_button.pressed.connect(_toggle_cheat_codes)
+
+	var cheat_info := Label.new()
+	cheat_info.text = "Allow or block cheat-code use in Story Mode."
+	cheat_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cheat_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	menu_content.add_child(cheat_info)
+
+	var close_button := _make_button("CLOSE MENU", 280)
+	menu_content.add_child(close_button)
+	close_button.pressed.connect(_toggle_pause_menu)
+	_update_cheat_codes_button()
+
+
+func _toggle_pause_menu() -> void:
+	var opening := not pause_menu_panel.visible
+	pause_menu_panel.visible = opening
+	get_tree().paused = opening
+	if opening:
+		steer_input = 0.0
+		throttle_input = 0.0
+		move_dir = Vector2.ZERO
+		brake_pressed = false
+		nitro_pressed = false
+		drift_pressed = false
+		if engine_audio and engine_audio.playing:
+			engine_audio.stop()
+
+
+func _toggle_cheat_codes() -> void:
+	cheat_codes_enabled = not cheat_codes_enabled
+	_update_cheat_codes_button()
+	_save_game_settings()
+	if is_instance_valid(status_label):
+		status_label.text = "CHEAT CODES  •  %s" % ("ENABLED" if cheat_codes_enabled else "DISABLED")
+
+
+func _update_cheat_codes_button() -> void:
+	if is_instance_valid(cheat_codes_button):
+		cheat_codes_button.text = "CHEAT CODES: ON" if cheat_codes_enabled else "CHEAT CODES: OFF"
 
 
 func _get_wallet_text() -> String:
