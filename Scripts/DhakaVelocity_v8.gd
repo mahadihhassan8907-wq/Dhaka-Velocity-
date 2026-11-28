@@ -286,22 +286,28 @@ func _load_saved_settings() -> void:
 	character_index = clampi(int(config.get_value("characters", "selected", character_index)), 0, 2)
 	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
 	if config.has_section_key("characters", "cash_balances"):
-		character_cash = config.get_value("characters", "cash_balances", character_cash)
-		for i in range(3):
-			character_cash[i] = maxi(0, int(character_cash[i]))
+		var saved_cash: Array = config.get_value("characters", "cash_balances", [])
+		for i in range(mini(3, saved_cash.size())):
+			character_cash[i] = maxi(0, int(saved_cash[i]))
 		cash_balance = character_cash[character_index]
 	else:
 		character_cash[character_index] = cash_balance
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
-	character_world_positions = config.get_value("characters", "world_positions", character_world_positions)
-	character_mission_steps = config.get_value("story", "mission_steps", character_mission_steps)
-	character_mission_active = config.get_value("story", "mission_active", character_mission_active)
-	character_mission_completed = config.get_value("story", "mission_completed", character_mission_completed)
+	var saved_positions: Array = config.get_value("characters", "world_positions", [])
+	for i in range(mini(3, saved_positions.size())):
+		if typeof(saved_positions[i]) == TYPE_VECTOR3:
+			character_world_positions[i] = saved_positions[i]
+	var saved_steps: Array = config.get_value("story", "mission_steps", [])
+	var saved_active: Array = config.get_value("story", "mission_active", [])
+	var saved_completed: Array = config.get_value("story", "mission_completed", [])
 	for i in range(3):
-		character_mission_steps[i] = clampi(int(character_mission_steps[i]), 0, 3)
-		character_mission_active[i] = bool(character_mission_active[i]) and character_mission_steps[i] < 3
-		character_mission_completed[i] = clampi(int(character_mission_completed[i]), 0, 3)
+		if i < saved_steps.size():
+			character_mission_steps[i] = clampi(int(saved_steps[i]), 0, 3)
+		if i < saved_active.size():
+			character_mission_active[i] = bool(saved_active[i]) and character_mission_steps[i] < 3
+		if i < saved_completed.size():
+			character_mission_completed[i] = clampi(int(saved_completed[i]), 0, 3)
 
 func _save_game_settings() -> void:
 	var config := ConfigFile.new()
