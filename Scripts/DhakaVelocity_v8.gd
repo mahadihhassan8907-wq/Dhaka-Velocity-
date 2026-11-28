@@ -143,6 +143,7 @@ var city_environment: Environment
 var time_of_day := 0.36
 var day_night_button: Button
 var city_street_lights: Array[OmniLight3D] = []
+var home_interior_lights: Array[OmniLight3D] = []
 var world_clock_label: Label
 var world_clock_refresh := 0.0
 
@@ -696,7 +697,9 @@ func _build_character_homes() -> void:
 		lamp.light_color = Color(1.0, 0.78, 0.52) if i != 1 else Color(0.70, 0.82, 1.0)
 		lamp.light_energy = 0.55
 		lamp.omni_range = 8.0
+		lamp.visible = false
 		home.add_child(lamp)
+		home_interior_lights.append(lamp)
 		var sign := Label3D.new()
 		sign.text = character_home_names[i]
 		sign.position = Vector3(0, 4.2, -4.6)
@@ -1758,6 +1761,8 @@ func _update_day_night_visuals() -> void:
 	city_environment.ambient_light_sky_contribution = lerpf(0.12, 0.38, daylight)
 	for street_light in city_street_lights:
 		street_light.visible = night_factor > 0.62
+	for home_light in home_interior_lights:
+		home_light.visible = night_factor > 0.62
 	if is_instance_valid(day_night_button):
 		_update_day_night_button()
 
