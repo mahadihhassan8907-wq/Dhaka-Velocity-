@@ -68,6 +68,10 @@ func _process(delta: float) -> void:
 	if world_clock_refresh >= 1.0:
 		world_clock_refresh = 0.0
 		_update_world_clock()
+	world_time_save_refresh += delta
+	if world_time_save_refresh >= 30.0:
+		world_time_save_refresh = 0.0
+		_save_game_settings()
 		if not dragging and absf(steering_value) > 0.01:
 			steering_value = move_toward(steering_value, 0.0, delta * 2.8)
 			steering_changed.emit(steering_value)
@@ -146,6 +150,7 @@ var city_street_lights: Array[OmniLight3D] = []
 var home_interior_lights: Array[OmniLight3D] = []
 var world_clock_label: Label
 var world_clock_refresh := 0.0
+var world_time_save_refresh := 0.0
 
 var player: CharacterBody3D
 var car: CharacterBody3D
