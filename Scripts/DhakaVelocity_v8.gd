@@ -1738,7 +1738,7 @@ func _update_world_clock() -> void:
 	var total_minutes := int(floor(time_of_day * 1440.0)) % 1440
 	var hour := int(total_minutes / 60)
 	var minute := total_minutes % 60
-	world_clock_label.text = "DHaka TIME  %02d:%02d  •  %s" % [hour, minute, _get_time_of_day_name()]
+	world_clock_label.text = "DHAKA TIME  %02d:%02d  •  %s" % [hour, minute, _get_time_of_day_name()]
 
 func _update_day_night_button() -> void:
 	if is_instance_valid(day_night_button):
