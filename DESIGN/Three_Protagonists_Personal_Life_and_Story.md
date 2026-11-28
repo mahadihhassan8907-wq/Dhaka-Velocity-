@@ -38,17 +38,17 @@ Dhaka Velocity has one continuous single-player Dhaka world. Story Mode includes
 ## Implemented in the current mobile prototype
 - Three distinct home compounds with separate facades, signs, interior furniture, lighting, and walk-in front entrances.
 - Personal Life panel with character profile, home name, current mission, and per-character story progress.
-- Go To My Home action for the active protagonist.
+- Go To My Home action for the active protagonist, plus a home Rest / Save interaction that restores stamina.
 - Three personal mission steps per protagonist, with separate progression and rewards.
 - A visible world-space beacon marks the active mission destination.
-- Character switching restores the selected protagonist's own world position and wallet.
-- Each protagonist has a distinct on-foot movement profile.
+- Character switching restores the selected protagonist's own world position and separate wallet.
+- Each protagonist has a distinct on-foot movement profile and personal funds display.
 - Mission progress, active tracking, character positions, and wallet balances are saved in the local game config.
-- Character position autosaves every 15 seconds during play.
+- Character position autosaves every 15 seconds during play; home rest also saves immediately.
 
 ## Full production roadmap (not yet implemented)
 1. Add bespoke high-quality character models, facial identity, clothing variants, voice and animation sets.
-2. Add proper enterable home interiors with bedroom, kitchen, garage, storage, wardrobe and sleep/save interactions.
+2. Expand the prototype home interiors with bedroom, kitchen, garage, storage, wardrobe and a full sleep/day-cycle system.
 3. Add family members, friends, contacts, phone calls, dialogue choices and character-specific daily schedules.
 4. Expand each personal arc into multi-stage missions with driving, delivery, chase, stealth, timed objectives and cutscenes.
 5. Add shared crossover missions where the three protagonists meet and can be switched during selected sequences.
