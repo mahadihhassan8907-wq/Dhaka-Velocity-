@@ -1632,8 +1632,6 @@ func _toggle_personal_mission() -> void:
 
 
 func _update_personal_life() -> void:
-	if driving:
-		return
 	var index := character_index
 	if not character_mission_active[index] or character_mission_steps[index] >= 3:
 		return
@@ -1642,7 +1640,9 @@ func _update_personal_life() -> void:
 	if is_instance_valid(personal_mission_marker):
 		personal_mission_marker.global_position = Vector3(target.x, 0.18, target.z)
 		personal_mission_marker.visible = true
-	if player.global_position.distance_to(target) <= 5.5:
+	# Personal story destinations can now be reached on foot or while driving.
+	var mission_actor_position: Vector3 = car.global_position if driving and is_instance_valid(car) else player.global_position
+	if mission_actor_position.distance_to(target) <= 5.5:
 		var reward := int(mission["reward"])
 		character_mission_steps[index] += 1
 		character_mission_completed[index] += 1
