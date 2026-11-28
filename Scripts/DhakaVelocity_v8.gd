@@ -235,6 +235,7 @@ var cheat_codes_enabled := false
 var character_home_positions: Array[Vector3] = [Vector3(-112, 0, -112), Vector3(112, 0, -112), Vector3(-112, 0, 112)]
 var character_home_names: Array[String] = ["MARCUS' FAMILY HOME", "FELIX' CITY APARTMENT", "DAMIAN'S RIVERSIDE HOUSE"]
 var character_home_nodes: Array[Node3D] = []
+var character_world_positions: Array[Vector3] = [Vector3(-5, 1, 5), Vector3(112, 0.2, -119), Vector3(-112, 0.2, 119)]
 var character_mission_steps: Array[int] = [0, 0, 0]
 var character_mission_active: Array[bool] = [false, false, false]
 var character_mission_completed: Array[int] = [0, 0, 0]
@@ -283,6 +284,7 @@ func _load_saved_settings() -> void:
 	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
+	character_world_positions = config.get_value("characters", "world_positions", character_world_positions)
 	character_mission_steps = config.get_value("story", "mission_steps", character_mission_steps)
 	character_mission_active = config.get_value("story", "mission_active", character_mission_active)
 	character_mission_completed = config.get_value("story", "mission_completed", character_mission_completed)
@@ -302,6 +304,9 @@ func _save_game_settings() -> void:
 	config.set_value("garage", "headlights_enabled", headlights_enabled)
 	config.set_value("controls", "steering_mode", steering_mode)
 	config.set_value("characters", "selected", character_index)
+	if is_instance_valid(player):
+		character_world_positions[character_index] = player.global_position
+	config.set_value("characters", "world_positions", character_world_positions)
 	config.set_value("economy", "cash", cash_balance)
 	config.set_value("economy", "water_bottles", water_bottles)
 	config.set_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled)
@@ -1510,19 +1515,19 @@ func _get_personal_missions(index: int) -> Array[Dictionary]:
 			return [
 				{"title": "A FAMILY FAVOUR", "detail": "Visit the local shop and collect a family parcel.", "target": Vector3(-15, 0, 15), "reward": 120},
 				{"title": "NORTH SIDE DELIVERY", "detail": "Take the parcel to the north avenue meeting point.", "target": Vector3(0, 0, -96), "reward": 180},
-				{"title": "BACK HOME", "detail": "Return home and check that your family is safe.", "target": character_home_positions[0] + Vector3(0, 0, 7), "reward": 250}
+				{"title": "BACK HOME", "detail": "Return home and check that your family is safe.", "target": character_home_positions[0] + Vector3(0, 0, -7.5), "reward": 250}
 			]
 		1:
 			return [
 				{"title": "RACER'S CALL", "detail": "Meet your racing contact at the central junction.", "target": Vector3(0, 0, 0), "reward": 140},
 				{"title": "TEST RUN", "detail": "Drive or travel to the east avenue checkpoint.", "target": Vector3(96, 0, 0), "reward": 220},
-				{"title": "COOL DOWN", "detail": "Head back to your city apartment.", "target": character_home_positions[1] + Vector3(0, 0, 7), "reward": 280}
+				{"title": "COOL DOWN", "detail": "Head back to your city apartment.", "target": character_home_positions[1] + Vector3(0, 0, -7.5), "reward": 280}
 			]
 		_:
 			return [
 				{"title": "OLD DEBT", "detail": "Find the contact on the west side of the district.", "target": Vector3(-96, 0, 0), "reward": 160},
 				{"title": "QUIET PICKUP", "detail": "Reach the south avenue and collect the hidden package.", "target": Vector3(0, 0, 96), "reward": 240},
-				{"title": "SAFE HOUSE", "detail": "Return to your own house to finish the job.", "target": character_home_positions[2] + Vector3(0, 0, 7), "reward": 320}
+				{"title": "SAFE HOUSE", "detail": "Return to your own house to finish the job.", "target": character_home_positions[2] + Vector3(0, 0, -7.5), "reward": 320}
 
 
 func _update_life_menu() -> void:
@@ -1548,7 +1553,7 @@ func _go_to_character_home() -> void:
 	if driving:
 		status_label.text = "Exit the car before travelling home"
 		return
-	player.global_position = character_home_positions[character_index] + Vector3(0, 0.2, 7)
+	player.global_position = character_home_positions[character_index] + Vector3(0, 0.2, -7.5)
 	player.velocity = Vector3.ZERO
 	camera_yaw = 0.0
 	status_label.text = "HOME  •  Arrived at %s" % character_home_names[character_index]
@@ -1572,23 +1577,22 @@ func _toggle_personal_mission() -> void:
 func _update_personal_life() -> void:
 	if driving:
 		return
-	for index in range(3):
-		if not character_mission_active[index] or character_mission_steps[index] >= 3:
-			continue
-		var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
+	var index := character_index
+	if not character_mission_active[index] or character_mission_steps[index] >= 3:
+		return
+	var mission: Dictionary = _get_personal_missions(index)[character_mission_steps[index]]
 		var target: Vector3 = mission["target"]
-		if player.global_position.distance_to(target) <= 5.5:
-			var reward := int(mission["reward"])
-			character_mission_steps[index] += 1
-			character_mission_completed[index] += 1
-			character_mission_active[index] = false
-			if index == character_index:
-				cash_balance += reward
-				_refresh_wallet()
-				status_label.text = "MISSION COMPLETE  •  %s  •  +$%d" % [mission["title"], reward]
-				mission_label.text = "%s  •  PERSONAL STORY %d/3" % [character_names[index], character_mission_completed[index]]
-			_update_life_menu()
-			_save_game_settings()
+	if player.global_position.distance_to(target) <= 5.5:
+		var reward := int(mission["reward"])
+		character_mission_steps[index] += 1
+		character_mission_completed[index] += 1
+		character_mission_active[index] = false
+		cash_balance += reward
+		_refresh_wallet()
+		status_label.text = "MISSION COMPLETE  •  %s  •  +$%d" % [mission["title"], reward]
+		mission_label.text = "%s  •  PERSONAL STORY %d/3" % [character_names[index], character_mission_completed[index]]
+		_update_life_menu()
+		_save_game_settings()
 
 
 func _toggle_pause_menu() -> void:
@@ -1818,7 +1822,11 @@ func _update_control_visibility() -> void:
 func _cycle_character() -> void:
 	if driving:
 		return
+	character_world_positions[character_index] = player.global_position
 	character_index = (character_index + 1) % character_names.size()
+	player.global_position = character_world_positions[character_index]
+	player.velocity = Vector3.ZERO
+	camera_yaw = 0.0
 	for index in range(character_visuals.size()):
 		character_visuals[index].visible = index == character_index
 	character_button.text = "CHAR: " + character_names[character_index]
