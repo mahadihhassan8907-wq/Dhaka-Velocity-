@@ -189,6 +189,9 @@ var shop_purchase_button: Button
 var cash_balance := 250
 var water_bottles := 0
 var wallet_label: Label
+var stamina_label: Label
+var shop_drink_button: Button
+var stamina := 100.0
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
@@ -1151,6 +1154,14 @@ func _build_ui() -> void:
 	layer.add_child(shop_purchase_button)
 	shop_purchase_button.visible = false
 	shop_purchase_button.pressed.connect(_buy_shop_water)
+	shop_drink_button = _make_button("DRINK WATER", 156)
+	shop_drink_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	shop_drink_button.position = Vector2(-178, -336)
+	shop_drink_button.size = Vector2(156, 48)
+	shop_drink_button.custom_minimum_size = Vector2(156, 48)
+	layer.add_child(shop_drink_button)
+	shop_drink_button.visible = false
+	shop_drink_button.pressed.connect(_drink_shop_water)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
@@ -1168,6 +1179,12 @@ func _build_ui() -> void:
 	wallet_label.add_theme_font_size_override("font_size", 16)
 	wallet_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.32))
 	layer.add_child(wallet_label)
+	stamina_label = Label.new()
+	stamina_label.text = "STAMINA  100%"
+	stamina_label.position = Vector2(12, 86)
+	stamina_label.add_theme_font_size_override("font_size", 15)
+	stamina_label.add_theme_color_override("font_color", Color(0.48, 0.92, 0.68))
+	layer.add_child(stamina_label)
 	# Separate on-screen camera zoom controls
 	var zoom_controls := HBoxContainer.new()
 	zoom_controls.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1203,6 +1220,17 @@ func _buy_shop_water() -> void:
 	shop_purchase_button.text = "BUY WATER $20"
 	status_label.text = "PURCHASED WATER  •  Bottles: %d  •  Cash: $%d" % [water_bottles, cash_balance]
 
+
+func _drink_shop_water() -> void:
+	if water_bottles <= 0:
+		status_label.text = "INVENTORY  •  No water bottles"
+		return
+	water_bottles -= 1
+	stamina = minf(100.0, stamina + 45.0)
+	_refresh_wallet()
+	stamina_label.text = "STAMINA  %d%%" % int(stamina)
+	_save_game_settings()
+	status_label.text = "DRANK WATER  •  Stamina restored"
 
 func _toggle_shop_door() -> void:
 	if not is_instance_valid(shop_door_pivot):
@@ -1512,6 +1540,8 @@ func _process(delta: float) -> void:
 			shop_interaction_button.visible = false
 		if is_instance_valid(shop_purchase_button):
 			shop_purchase_button.visible = false
+	if is_instance_valid(shop_drink_button):
+		shop_drink_button.visible = not driving and water_bottles > 0
 	if not mission_complete:
 		var actor_position := car.global_position if driving else player.global_position
 		if actor_position.distance_to(checkpoint.global_position) < 3.2:
@@ -1613,7 +1643,13 @@ func _physics_process(delta: float) -> void:
 		var direction := camera_right * move_dir.x + camera_forward * -move_dir.y
 		if direction.length_squared() > 1.0:
 			direction = direction.normalized()
-		var walk_speed := 7.0 if run_pressed else 4.5
+		if run_pressed and move_dir.length() > 0.1 and stamina > 0.0:
+			stamina = maxf(0.0, stamina - 22.0 * delta)
+		else:
+			stamina = minf(100.0, stamina + 12.0 * delta)
+		if is_instance_valid(stamina_label):
+			stamina_label.text = "STAMINA  %d%%" % int(stamina)
+		var walk_speed := 7.0 if run_pressed and stamina > 0.0 else 4.5
 		player.velocity.x = direction.x * walk_speed
 		player.velocity.z = direction.z * walk_speed
 		if direction.length_squared() > 0.001:
