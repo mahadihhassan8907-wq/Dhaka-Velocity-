@@ -188,6 +188,7 @@ var shop_interaction_button: Button
 var shop_purchase_button: Button
 var cash_balance := 250
 var water_bottles := 0
+var wallet_label: Label
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
@@ -255,6 +256,8 @@ func _load_saved_settings() -> void:
 	headlights_enabled = bool(config.get_value("garage", "headlights_enabled", headlights_enabled))
 	steering_mode = clampi(int(config.get_value("controls", "steering_mode", steering_mode)), 0, 1)
 	character_index = clampi(int(config.get_value("characters", "selected", character_index)), 0, 2)
+	cash_balance = maxi(0, int(config.get_value("economy", "cash", cash_balance)))
+	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 
 func _save_game_settings() -> void:
 	var config := ConfigFile.new()
@@ -267,6 +270,8 @@ func _save_game_settings() -> void:
 	config.set_value("garage", "headlights_enabled", headlights_enabled)
 	config.set_value("controls", "steering_mode", steering_mode)
 	config.set_value("characters", "selected", character_index)
+	config.set_value("economy", "cash", cash_balance)
+	config.set_value("economy", "water_bottles", water_bottles)
 	var error := config.save("user://dhaka_velocity.cfg")
 	if error != OK:
 		push_warning("Could not save Dhaka Velocity settings: %s" % error_string(error))
@@ -464,6 +469,17 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
 	_box(building, Vector3(0.9, 0.7, 0.65), Vector3(0.0, 1.0, -2.0), Color(0.12, 0.32, 0.38))
 	_box(building, Vector3(1.0, 0.08, 0.72), Vector3(0.0, 1.38, -2.0), Color(0.12, 0.16, 0.18))
+	# Small, colorful stock on both shelves makes the shop feel stocked and readable.
+	var product_colors: Array[Color] = [
+		Color(0.12, 0.58, 0.88), Color(0.88, 0.24, 0.16),
+		Color(0.92, 0.72, 0.12), Color(0.20, 0.68, 0.34)
+	]
+	for shelf_x in [-4.8, 4.8]:
+		for product_index in range(4):
+			var product_x := shelf_x - 1.55 + float(product_index) * 1.0
+			var product_color: Color = product_colors[product_index]
+			_box(building, Vector3(0.48, 0.48, 0.34), Vector3(product_x, 2.08, 0.72), product_color)
+			_box(building, Vector3(0.52, 0.08, 0.38), Vector3(product_x, 2.36, 0.72), Color(0.88, 0.88, 0.82))
 	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
 
 
@@ -1146,6 +1162,12 @@ func _build_ui() -> void:
 	status_label.position = Vector2(12, 12)
 	status_label.add_theme_font_size_override("font_size", 17)
 	layer.add_child(status_label)
+	wallet_label = Label.new()
+	wallet_label.text = _get_wallet_text()
+	wallet_label.position = Vector2(12, 62)
+	wallet_label.add_theme_font_size_override("font_size", 16)
+	wallet_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.32))
+	layer.add_child(wallet_label)
 	# Separate on-screen camera zoom controls
 	var zoom_controls := HBoxContainer.new()
 	zoom_controls.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1163,12 +1185,21 @@ func _build_ui() -> void:
 	zoom_out_button.pressed.connect(_zoom_out)
 
 
+func _get_wallet_text() -> String:
+	return "WALLET  $%d    WATER  x%d" % [cash_balance, water_bottles]
+
+func _refresh_wallet() -> void:
+	if is_instance_valid(wallet_label):
+		wallet_label.text = _get_wallet_text()
+
 func _buy_shop_water() -> void:
 	if cash_balance < 20:
-		status_label.text = "SHOP  •  Not enough cash"
+			status_label.text = "SHOP  •  Not enough cash"
 		return
 	cash_balance -= 20
 	water_bottles += 1
+	_refresh_wallet()
+	_save_game_settings()
 	shop_purchase_button.text = "BUY WATER $20"
 	status_label.text = "PURCHASED WATER  •  Bottles: %d  •  Cash: $%d" % [water_bottles, cash_balance]
 
