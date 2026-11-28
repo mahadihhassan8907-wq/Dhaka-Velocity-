@@ -468,8 +468,8 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	door_body.add_child(door_collision)
 	# Basic interior fixtures make the shop visibly usable rather than an empty shell.
 	_box(building, Vector3(3.8, 1.05, 0.85), Vector3(0.0, 0.62, -1.6), Color(0.34, 0.20, 0.11))
-	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(-4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
-	_box(building, Vector3(4.8, 1.7, 0.55), Vector3(4.8, 1.0, 1.0), Color(0.25, 0.29, 0.32))
+	_box(building, Vector3(3.9, 1.7, 0.55), Vector3(-4.35, 1.0, 1.0), Color(0.25, 0.29, 0.32))
+	_box(building, Vector3(3.9, 1.7, 0.55), Vector3(4.35, 1.0, 1.0), Color(0.25, 0.29, 0.32))
 	_box(building, Vector3(0.9, 0.7, 0.65), Vector3(0.0, 1.0, -2.0), Color(0.12, 0.32, 0.38))
 	_box(building, Vector3(1.0, 0.08, 0.72), Vector3(0.0, 1.38, -2.0), Color(0.12, 0.16, 0.18))
 	# A simple shopkeeper stands behind the counter as a recognizable interior character.
@@ -492,9 +492,9 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 		Color(0.12, 0.58, 0.88), Color(0.88, 0.24, 0.16),
 		Color(0.92, 0.72, 0.12), Color(0.20, 0.68, 0.34)
 	]
-	for shelf_x in [-4.8, 4.8]:
+	for shelf_x in [-4.35, 4.35]:
 		for product_index in range(4):
-			var product_x := shelf_x - 1.55 + float(product_index) * 1.0
+			var product_x := shelf_x - 1.35 + float(product_index) * 0.9
 			var product_color: Color = product_colors[product_index]
 			_box(building, Vector3(0.48, 0.48, 0.34), Vector3(product_x, 2.08, 0.72), product_color)
 			_box(building, Vector3(0.52, 0.08, 0.38), Vector3(product_x, 2.36, 0.72), Color(0.88, 0.88, 0.82))
