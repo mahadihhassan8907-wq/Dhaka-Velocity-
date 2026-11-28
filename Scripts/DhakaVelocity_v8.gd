@@ -230,7 +230,6 @@ func _ready() -> void:
 	_build_car()
 	_build_traffic()
 	_build_pedestrians()
-	_build_checkpoint()
 	_build_camera()
 	_build_ui()
 	_build_vehicle_audio()
@@ -1179,7 +1178,7 @@ func _build_ui() -> void:
 	shop_drink_button.pressed.connect(_drink_shop_water)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
-	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
+	mission_label.text = "FREE ROAM  •  Explore Dhaka"
 	mission_label.position = Vector2(12, 38)
 	mission_label.add_theme_font_size_override("font_size", 16)
 	layer.add_child(mission_label)
@@ -1560,12 +1559,6 @@ func _process(delta: float) -> void:
 			shop_purchase_button.visible = false
 	if is_instance_valid(shop_drink_button):
 		shop_drink_button.visible = not driving and water_bottles > 0
-	if not mission_complete:
-		var actor_position := car.global_position if driving else player.global_position
-		if actor_position.distance_to(checkpoint.global_position) < 3.2:
-			_advance_city_tour()
-		else:
-			checkpoint.rotate_y(delta * 0.8)
 func _move_traffic(delta: float) -> void:
 	for i in range(traffic_cars.size()):
 		var traffic := traffic_cars[i]
