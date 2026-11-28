@@ -138,6 +138,7 @@ var city_sun: DirectionalLight3D
 var city_environment: Environment
 var time_of_day := 0.36
 var day_night_button: Button
+var city_street_lights: Array[OmniLight3D] = []
 
 var player: CharacterBody3D
 var car: CharacterBody3D
@@ -722,6 +723,16 @@ func _build_city_streetlight(world_position: Vector3) -> void:
 	pole.material_override = _city_material(Color(0.16, 0.18, 0.20))
 	lamp.add_child(pole)
 	_city_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
+	var street_light := OmniLight3D.new()
+	street_light.name = "NightStreetLamp"
+	street_light.position = Vector3(0.34, 4.95, 0.0)
+	street_light.light_color = Color(1.0, 0.78, 0.48)
+	street_light.light_energy = 0.72
+	street_light.omni_range = 11.0
+	street_light.shadow_enabled = false
+	street_light.visible = false
+	lamp.add_child(street_light)
+	city_street_lights.append(street_light)
 
 
 func _build_pedestrians() -> void:
@@ -1720,6 +1731,8 @@ func _update_day_night_visuals() -> void:
 	city_environment.ambient_light_color = Color(0.12, 0.17, 0.30).lerp(Color(0.62, 0.68, 0.76), daylight)
 	city_environment.ambient_light_energy = lerpf(0.28, 0.88, daylight)
 	city_environment.ambient_light_sky_contribution = lerpf(0.12, 0.38, daylight)
+	for street_light in city_street_lights:
+		street_light.visible = night_factor > 0.62
 	if is_instance_valid(day_night_button):
 		_update_day_night_button()
 
