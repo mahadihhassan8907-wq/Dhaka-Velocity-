@@ -470,7 +470,7 @@ func _build_rooftop_water_tank(building: StaticBody3D, width: float, depth: floa
 	lid_material.roughness = 0.38
 	for x_side in [-1.0, 1.0]:
 		for z_side in [-1.0, 1.0]:
-			_city_city_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
+			_city_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
 	var tank_mesh := CylinderMesh.new()
 	tank_mesh.top_radius = 0.92
 	tank_mesh.bottom_radius = 0.92
