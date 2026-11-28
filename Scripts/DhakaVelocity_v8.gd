@@ -125,6 +125,8 @@ class VirtualMoveJoystick extends Control:
 		draw_arc(center, radius, 0.0, TAU, 64, Color(0.82, 0.9, 0.96, 0.8), 3.0, true)
 		draw_circle(center + direction * radius * 0.58, radius * 0.34, Color(0.22, 0.72, 0.9, 0.82))
 
+var city_material_cache: Dictionary = {}
+
 var player: CharacterBody3D
 var car: CharacterBody3D
 var enter_exit_button: Button
@@ -304,33 +306,65 @@ func _solid_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> vo
 	collision.shape = shape
 	body.add_child(collision)
 
+
+func _city_material(color: Color) -> StandardMaterial3D:
+	var key := color.to_html(true)
+	if city_material_cache.has(key):
+		return city_material_cache[key] as StandardMaterial3D
+	var material := _mat(color)
+	city_material_cache[key] = material
+	return material
+
+
+func _city_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	node.position = pos
+	node.material_override = _city_material(color)
+	parent.add_child(node)
+	return node
+
+
+func _city_solid_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
+	var body := StaticBody3D.new()
+	body.position = pos
+	parent.add_child(body)
+	_city_box(body, size, Vector3.ZERO, color)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+
 func _build_city() -> void:
 	# First open-world district: a 260 m x 260 m connected street grid.
 	# Buildings use simple shared gameplay geometry for the mobile prototype;
 	# detailed interiors, NPC routines and streamed districts come in later phases.
-	_solid_box(self, Vector3(260.0, 0.3, 260.0), Vector3(0.0, -0.2, 0.0), Color(0.20, 0.42, 0.25))
+	_city_solid_city_box(self, Vector3(260.0, 0.3, 260.0), Vector3(0.0, -0.2, 0.0), Color(0.20, 0.42, 0.25))
 
 	var road_coordinates: Array[float] = [-96.0, -48.0, 0.0, 48.0, 96.0]
 	for road_coordinate in road_coordinates:
 		var road_width := 16.0 if is_zero_approx(road_coordinate) else 11.0
-		_solid_box(self, Vector3(road_width, 0.08, 260.0), Vector3(road_coordinate, 0.0, 0.0), Color(0.105, 0.115, 0.13))
-		_solid_box(self, Vector3(260.0, 0.08, road_width), Vector3(0.0, 0.01, road_coordinate), Color(0.105, 0.115, 0.13))
+		_city_solid_city_box(self, Vector3(road_width, 0.08, 260.0), Vector3(road_coordinate, 0.0, 0.0), Color(0.105, 0.115, 0.13))
+		_city_solid_city_box(self, Vector3(260.0, 0.08, road_width), Vector3(0.0, 0.01, road_coordinate), Color(0.105, 0.115, 0.13))
 
 		# Sidewalks and pale curb edges run along both sides of every road.
 		var sidewalk_offset := road_width * 0.5 + 1.5
 		for side in [-1.0, 1.0]:
-			_solid_box(self, Vector3(2.4, 0.16, 260.0), Vector3(road_coordinate + side * sidewalk_offset, 0.04, 0.0), Color(0.48, 0.50, 0.51))
-			_solid_box(self, Vector3(260.0, 0.16, 2.4), Vector3(0.0, 0.04, road_coordinate + side * sidewalk_offset), Color(0.48, 0.50, 0.51))
-			_box(self, Vector3(0.14, 0.10, 260.0), Vector3(road_coordinate + side * (road_width * 0.5 + 0.12), 0.10, 0.0), Color(0.78, 0.78, 0.72))
-			_box(self, Vector3(260.0, 0.10, 0.14), Vector3(0.0, 0.10, road_coordinate + side * (road_width * 0.5 + 0.12)), Color(0.78, 0.78, 0.72))
+			_city_solid_city_box(self, Vector3(2.4, 0.16, 260.0), Vector3(road_coordinate + side * sidewalk_offset, 0.04, 0.0), Color(0.48, 0.50, 0.51))
+			_city_solid_city_box(self, Vector3(260.0, 0.16, 2.4), Vector3(0.0, 0.04, road_coordinate + side * sidewalk_offset), Color(0.48, 0.50, 0.51))
+			_city_box(self, Vector3(0.14, 0.10, 260.0), Vector3(road_coordinate + side * (road_width * 0.5 + 0.12), 0.10, 0.0), Color(0.78, 0.78, 0.72))
+			_city_box(self, Vector3(260.0, 0.10, 0.14), Vector3(0.0, 0.10, road_coordinate + side * (road_width * 0.5 + 0.12)), Color(0.78, 0.78, 0.72))
 
 	# Broken centre markings make the roads readable without filling the scene with detail.
 	for road_coordinate in road_coordinates:
 		for segment in range(-118, 119, 14):
 			if abs(segment) % 48 < 9:
 				continue
-			_box(self, Vector3(0.16, 0.025, 4.2), Vector3(road_coordinate, 0.058, float(segment)), Color(0.92, 0.82, 0.38))
-			_box(self, Vector3(4.2, 0.025, 0.16), Vector3(float(segment), 0.058, road_coordinate), Color(0.92, 0.82, 0.38))
+			_city_box(self, Vector3(0.16, 0.025, 4.2), Vector3(road_coordinate, 0.058, float(segment)), Color(0.92, 0.82, 0.38))
+			_city_box(self, Vector3(4.2, 0.025, 0.16), Vector3(float(segment), 0.058, road_coordinate), Color(0.92, 0.82, 0.38))
 
 	# Clearly marked enterable shop near the player's starting area.
 	_build_city_building(Vector3(-15.0, 0.0, 15.0), 13.0, 13.0, 18.0, Color(0.18, 0.38, 0.43), true)
@@ -398,8 +432,8 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 	collision.shape = collision_shape
 	building.add_child(collision)
 
-	_box(building, Vector3(width, height, depth), Vector3(0.0, height * 0.5, 0.0), facade_color)
-	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+	_city_box(building, Vector3(width, height, depth), Vector3(0.0, height * 0.5, 0.0), facade_color)
+	_city_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
 	_build_rooftop_water_tank(building, width, depth, height)
 
 	# Repeated front windows create a readable multi-storey facade.
@@ -410,17 +444,17 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 			continue
 		for window_index in range(3):
 			var window_x := -width * 0.32 + float(window_index) * width * 0.32
-			var glass := _box(building, Vector3(1.45, 1.35, 0.10), Vector3(window_x, window_y, -depth * 0.5 - 0.06), Color(0.10, 0.22, 0.31))
+			var glass := _city_box(building, Vector3(1.45, 1.35, 0.10), Vector3(window_x, window_y, -depth * 0.5 - 0.06), Color(0.10, 0.22, 0.31))
 			var glass_material := glass.material_override as StandardMaterial3D
 			if glass_material:
 				glass_material.metallic = 0.25
 				glass_material.roughness = 0.2
 
 	# A visible entrance is a future hook for the reusable interior/door interaction system.
-	_box(building, Vector3(1.55, 2.45, 0.12), Vector3(0.0, 1.23, -depth * 0.5 - 0.09), Color(0.16, 0.12, 0.09))
+	_city_box(building, Vector3(1.55, 2.45, 0.12), Vector3(0.0, 1.23, -depth * 0.5 - 0.09), Color(0.16, 0.12, 0.09))
 	if is_shop:
-		_box(building, Vector3(width * 0.72, 0.75, 0.18), Vector3(0.0, 3.15, -depth * 0.5 - 0.10), Color(0.12, 0.34, 0.43))
-		_box(building, Vector3(width * 0.78, 0.16, 0.35), Vector3(0.0, 2.55, -depth * 0.5 - 0.18), Color(0.86, 0.56, 0.20))
+		_city_box(building, Vector3(width * 0.72, 0.75, 0.18), Vector3(0.0, 3.15, -depth * 0.5 - 0.10), Color(0.12, 0.34, 0.43))
+		_city_box(building, Vector3(width * 0.78, 0.16, 0.35), Vector3(0.0, 2.55, -depth * 0.5 - 0.18), Color(0.86, 0.56, 0.20))
 
 
 
@@ -436,7 +470,7 @@ func _build_rooftop_water_tank(building: StaticBody3D, width: float, depth: floa
 	lid_material.roughness = 0.38
 	for x_side in [-1.0, 1.0]:
 		for z_side in [-1.0, 1.0]:
-			_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
+			_city_city_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
 	var tank_mesh := CylinderMesh.new()
 	tank_mesh.top_radius = 0.92
 	tank_mesh.bottom_radius = 0.92
@@ -559,7 +593,7 @@ func _build_city_streetlight(world_position: Vector3) -> void:
 	pole.position.y = 2.6
 	pole.material_override = _mat(Color(0.16, 0.18, 0.20))
 	lamp.add_child(pole)
-	_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
+	_city_box(lamp, Vector3(0.95, 0.16, 0.42), Vector3(0.34, 5.12, 0.0), Color(0.90, 0.82, 0.56))
 
 
 func _build_pedestrians() -> void:
