@@ -60,7 +60,10 @@ class VirtualSteeringWheel extends Control:
 		steering_changed.emit(steering_value)
 		queue_redraw()
 
-	func _process(delta: float) -> void:
+	
+func _process(delta: float) -> void:
+	time_of_day = fposmod(time_of_day + delta / 900.0, 1.0)
+	_update_day_night_visuals()
 		if not dragging and absf(steering_value) > 0.01:
 			steering_value = move_toward(steering_value, 0.0, delta * 2.8)
 			steering_changed.emit(steering_value)
@@ -131,6 +134,10 @@ var city_tank_mesh: CylinderMesh
 var city_tank_lid_mesh: CylinderMesh
 var city_tank_pipe_mesh: CylinderMesh
 var city_streetlight_pole_mesh: CylinderMesh
+var city_sun: DirectionalLight3D
+var city_environment: Environment
+var time_of_day := 0.36
+var day_night_button: Button
 
 var player: CharacterBody3D
 var car: CharacterBody3D
@@ -295,6 +302,7 @@ func _load_saved_settings() -> void:
 		character_cash[character_index] = cash_balance
 	water_bottles = maxi(0, int(config.get_value("economy", "water_bottles", water_bottles)))
 	cheat_codes_enabled = bool(config.get_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled))
+	time_of_day = clampf(float(config.get_value("world", "time_of_day", time_of_day)), 0.0, 1.0)
 	var saved_positions: Array = config.get_value("characters", "world_positions", [])
 	for i in range(mini(3, saved_positions.size())):
 		if typeof(saved_positions[i]) == TYPE_VECTOR3:
@@ -329,6 +337,7 @@ func _save_game_settings() -> void:
 	config.set_value("economy", "cash", cash_balance)
 	config.set_value("economy", "water_bottles", water_bottles)
 	config.set_value("gameplay", "cheat_codes_enabled", cheat_codes_enabled)
+	config.set_value("world", "time_of_day", time_of_day)
 	config.set_value("story", "mission_steps", character_mission_steps)
 	config.set_value("story", "mission_active", character_mission_active)
 	config.set_value("story", "mission_completed", character_mission_completed)
@@ -459,20 +468,23 @@ func _build_city() -> void:
 		_build_city_streetlight(Vector3(street_position, 0.0, -10.5))
 		_build_city_streetlight(Vector3(street_position, 0.0, 10.5))
 
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
-	sun.light_energy = 1.2
-	add_child(sun)
-	var environment := WorldEnvironment.new()
-	var world := Environment.new()
-	world.background_mode = Environment.BG_SKY
-	world.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	world.ambient_light_color = Color(0.55, 0.62, 0.72)
-	world.ambient_light_energy = 0.8
-	world.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	world.ambient_light_sky_contribution = 0.35
-	environment.environment = world
-	add_child(environment)
+	city_sun = DirectionalLight3D.new()
+	city_sun.name = "DhakaSunAndMoon"
+	city_sun.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
+	city_sun.light_energy = 1.2
+	city_sun.shadow_enabled = true
+	add_child(city_sun)
+	var environment_node := WorldEnvironment.new()
+	city_environment = Environment.new()
+	city_environment.background_mode = Environment.BG_SKY
+	city_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	city_environment.ambient_light_color = Color(0.55, 0.62, 0.72)
+	city_environment.ambient_light_energy = 0.8
+	city_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	city_environment.ambient_light_sky_contribution = 0.35
+	environment_node.environment = city_environment
+	add_child(environment_node)
+	_update_day_night_visuals()
 
 
 func _build_city_building(world_position: Vector3, width: float, depth: float, height: float, facade_color: Color, is_shop: bool) -> void:
@@ -1464,6 +1476,10 @@ func _build_pause_menu(layer: CanvasLayer) -> void:
 	cheat_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	menu_content.add_child(cheat_info)
 
+	day_night_button = _make_button("SKIP TO NIGHT", 280)
+	menu_content.add_child(day_night_button)
+	day_night_button.pressed.connect(_toggle_day_night)
+
 	var close_button := _make_button("CLOSE MENU", 280)
 	menu_content.add_child(close_button)
 	close_button.pressed.connect(_toggle_pause_menu)
@@ -1671,6 +1687,41 @@ func _toggle_pause_menu() -> void:
 		if engine_audio and engine_audio.playing:
 			engine_audio.stop()
 
+
+
+func _toggle_day_night() -> void:
+	time_of_day = 0.78 if time_of_day < 0.5 else 0.32
+	_update_day_night_visuals()
+	_update_day_night_button()
+	_save_game_settings()
+	if is_instance_valid(status_label):
+		status_label.text = "WORLD TIME  •  %s" % _get_time_of_day_name()
+
+func _get_time_of_day_name() -> String:
+	if time_of_day < 0.22 or time_of_day >= 0.78:
+		return "NIGHT"
+	if time_of_day < 0.32 or time_of_day >= 0.68:
+		return "SUNRISE / SUNSET"
+	return "DAY"
+
+func _update_day_night_button() -> void:
+	if is_instance_valid(day_night_button):
+		day_night_button.text = "SKIP TO NIGHT" if time_of_day < 0.5 else "SKIP TO DAY"
+
+func _update_day_night_visuals() -> void:
+	if not is_instance_valid(city_sun) or city_environment == null:
+		return
+	var angle := time_of_day * TAU - PI * 0.5
+	var daylight := clampf(sin(angle) * 1.8 + 0.15, 0.06, 1.0)
+	var night_factor := 1.0 - daylight
+	city_sun.rotation_degrees = Vector3(-90.0 + time_of_day * 360.0, -30.0, 0.0)
+	city_sun.light_energy = lerpf(0.12, 1.25, daylight)
+	city_sun.light_color = Color(1.0, 0.72, 0.48).lerp(Color(1.0, 0.96, 0.86), daylight)
+	city_environment.ambient_light_color = Color(0.12, 0.17, 0.30).lerp(Color(0.62, 0.68, 0.76), daylight)
+	city_environment.ambient_light_energy = lerpf(0.28, 0.88, daylight)
+	city_environment.ambient_light_sky_contribution = lerpf(0.12, 0.38, daylight)
+	if is_instance_valid(day_night_button):
+		_update_day_night_button()
 
 func _toggle_cheat_codes() -> void:
 	cheat_codes_enabled = not cheat_codes_enabled
