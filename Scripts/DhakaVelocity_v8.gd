@@ -64,6 +64,10 @@ class VirtualSteeringWheel extends Control:
 func _process(delta: float) -> void:
 	time_of_day = fposmod(time_of_day + delta / 900.0, 1.0)
 	_update_day_night_visuals()
+	world_clock_refresh += delta
+	if world_clock_refresh >= 1.0:
+		world_clock_refresh = 0.0
+		_update_world_clock()
 		if not dragging and absf(steering_value) > 0.01:
 			steering_value = move_toward(steering_value, 0.0, delta * 2.8)
 			steering_changed.emit(steering_value)
@@ -139,6 +143,8 @@ var city_environment: Environment
 var time_of_day := 0.36
 var day_night_button: Button
 var city_street_lights: Array[OmniLight3D] = []
+var world_clock_label: Label
+var world_clock_refresh := 0.0
 
 var player: CharacterBody3D
 var car: CharacterBody3D
@@ -1427,6 +1433,15 @@ func _build_ui() -> void:
 	stamina_label.add_theme_font_size_override("font_size", 15)
 	stamina_label.add_theme_color_override("font_color", Color(0.48, 0.92, 0.68))
 	layer.add_child(stamina_label)
+	world_clock_label = Label.new()
+	world_clock_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	world_clock_label.position = Vector2(-194, 106)
+	world_clock_label.size = Vector2(184, 28)
+	world_clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	world_clock_label.add_theme_font_size_override("font_size", 15)
+	world_clock_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.62))
+	layer.add_child(world_clock_label)
+	_update_world_clock()
 	# Separate on-screen camera zoom controls
 	var zoom_controls := HBoxContainer.new()
 	zoom_controls.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1704,6 +1719,7 @@ func _toggle_day_night() -> void:
 	time_of_day = 0.78 if time_of_day < 0.5 else 0.32
 	_update_day_night_visuals()
 	_update_day_night_button()
+	_update_world_clock()
 	_save_game_settings()
 	if is_instance_valid(status_label):
 		status_label.text = "WORLD TIME  •  %s" % _get_time_of_day_name()
@@ -1714,6 +1730,15 @@ func _get_time_of_day_name() -> String:
 	if time_of_day < 0.32 or time_of_day >= 0.68:
 		return "SUNRISE / SUNSET"
 	return "DAY"
+
+
+func _update_world_clock() -> void:
+	if not is_instance_valid(world_clock_label):
+		return
+	var total_minutes := int(floor(time_of_day * 1440.0)) % 1440
+	var hour := int(total_minutes / 60)
+	var minute := total_minutes % 60
+	world_clock_label.text = "DHaka TIME  %02d:%02d  •  %s" % [hour, minute, _get_time_of_day_name()]
 
 func _update_day_night_button() -> void:
 	if is_instance_valid(day_night_button):
