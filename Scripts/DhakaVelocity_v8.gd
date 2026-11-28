@@ -400,6 +400,7 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 
 	_box(building, Vector3(width, height, depth), Vector3(0.0, height * 0.5, 0.0), facade_color)
 	_box(building, Vector3(width + 0.35, 0.42, depth + 0.35), Vector3(0.0, height + 0.21, 0.0), Color(0.22, 0.25, 0.29))
+	_build_rooftop_water_tank(building, width, depth, height)
 
 	# Repeated front windows create a readable multi-storey facade.
 	var floors := maxi(2, int(floor((height - 1.0) / 3.2)))
@@ -421,6 +422,51 @@ func _build_city_building(world_position: Vector3, width: float, depth: float, h
 		_box(building, Vector3(width * 0.72, 0.75, 0.18), Vector3(0.0, 3.15, -depth * 0.5 - 0.10), Color(0.12, 0.34, 0.43))
 		_box(building, Vector3(width * 0.78, 0.16, 0.35), Vector3(0.0, 2.55, -depth * 0.5 - 0.18), Color(0.86, 0.56, 0.20))
 
+
+
+func _build_rooftop_water_tank(building: StaticBody3D, width: float, depth: float, height: float) -> void:
+	# Dhaka-inspired rooftop water tank: lightweight visual geometry with no extra physics.
+	var tank_x := -width * 0.22
+	var tank_z := depth * 0.12
+	var roof_y := height + 0.42
+	var support_material := _mat(Color(0.24, 0.27, 0.29))
+	var tank_material := _mat(Color(0.075, 0.19, 0.22))
+	tank_material.roughness = 0.48
+	var lid_material := _mat(Color(0.16, 0.27, 0.29))
+	lid_material.roughness = 0.38
+	for x_side in [-1.0, 1.0]:
+		for z_side in [-1.0, 1.0]:
+			_box(building, Vector3(0.12, 0.92, 0.12), Vector3(tank_x + x_side * 0.68, roof_y + 0.46, tank_z + z_side * 0.68), Color(0.24, 0.27, 0.29))
+	var tank_mesh := CylinderMesh.new()
+	tank_mesh.top_radius = 0.92
+	tank_mesh.bottom_radius = 0.92
+	tank_mesh.height = 1.58
+	var tank := MeshInstance3D.new()
+	tank.name = "Rooftop_Water_Tank"
+	tank.mesh = tank_mesh
+	tank.position = Vector3(tank_x, roof_y + 1.42, tank_z)
+	tank.material_override = tank_material
+	building.add_child(tank)
+	var lid_mesh := CylinderMesh.new()
+	lid_mesh.top_radius = 0.98
+	lid_mesh.bottom_radius = 0.98
+	lid_mesh.height = 0.12
+	var lid := MeshInstance3D.new()
+	lid.mesh = lid_mesh
+	lid.position = Vector3(tank_x, roof_y + 2.25, tank_z)
+	lid.material_override = lid_material
+	building.add_child(lid)
+	# A short outlet pipe makes the rooftop silhouette less box-like.
+	var pipe_mesh := CylinderMesh.new()
+	pipe_mesh.top_radius = 0.055
+	pipe_mesh.bottom_radius = 0.055
+	pipe_mesh.height = 0.72
+	var pipe := MeshInstance3D.new()
+	pipe.mesh = pipe_mesh
+	pipe.rotation.x = PI * 0.5
+	pipe.position = Vector3(tank_x, roof_y + 0.98, tank_z - 0.94)
+	pipe.material_override = support_material
+	building.add_child(pipe)
 
 
 func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth: float, height: float, facade_color: Color) -> void:
