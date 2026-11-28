@@ -182,8 +182,12 @@ var pedestrians: Array[Dictionary] = []
 var interactive_shop_created := false
 var shop_door_pivot: Node3D
 var shop_entrance_position := Vector3.ZERO
+var shop_counter_position := Vector3.ZERO
 var shop_door_open := false
 var shop_interaction_button: Button
+var shop_purchase_button: Button
+var cash_balance := 250
+var water_bottles := 0
 var brake_lamps: Array[MeshInstance3D] = []
 var reverse_lamps: Array[MeshInstance3D] = []
 var headlight_nodes: Array[SpotLight3D] = []
@@ -419,6 +423,7 @@ func _build_enterable_shop_structure(building: StaticBody3D, width: float, depth
 	var door_width := 2.0
 	var front_z := -depth * 0.5
 	shop_entrance_position = building.to_global(Vector3(0.0, 0.0, front_z - 0.9))
+	shop_counter_position = building.to_global(Vector3(0.0, 0.0, -2.8))
 	_solid_box(building, Vector3(width, 0.22, depth), Vector3(0.0, 0.0, 0.0), Color(0.34, 0.31, 0.27))
 	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(-width * 0.5, wall_height * 0.5, 0.0), facade_color)
 	_solid_box(building, Vector3(wall_thickness, wall_height, depth), Vector3(width * 0.5, wall_height * 0.5, 0.0), facade_color)
@@ -1122,6 +1127,14 @@ func _build_ui() -> void:
 	layer.add_child(shop_interaction_button)
 	shop_interaction_button.visible = false
 	shop_interaction_button.pressed.connect(_toggle_shop_door)
+	shop_purchase_button = _make_button("BUY WATER $20", 156)
+	shop_purchase_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	shop_purchase_button.position = Vector2(-178, -278)
+	shop_purchase_button.size = Vector2(156, 48)
+	shop_purchase_button.custom_minimum_size = Vector2(156, 48)
+	layer.add_child(shop_purchase_button)
+	shop_purchase_button.visible = false
+	shop_purchase_button.pressed.connect(_buy_shop_water)
 	on_foot_buttons = [move_joystick, run_button, jump_button]
 	mission_label = Label.new()
 	mission_label.text = "CITY TOUR 01/03  •  Reach FIRST DRIVE"
@@ -1148,6 +1161,16 @@ func _build_ui() -> void:
 	zoom_controls.add_child(zoom_out_button)
 	zoom_in_button.pressed.connect(_zoom_in)
 	zoom_out_button.pressed.connect(_zoom_out)
+
+
+func _buy_shop_water() -> void:
+	if cash_balance < 20:
+		status_label.text = "SHOP  •  Not enough cash"
+		return
+	cash_balance -= 20
+	water_bottles += 1
+	shop_purchase_button.text = "BUY WATER $20"
+	status_label.text = "PURCHASED WATER  •  Bottles: %d  •  Cash: $%d" % [water_bottles, cash_balance]
 
 
 func _toggle_shop_door() -> void:
@@ -1450,11 +1473,14 @@ func _process(delta: float) -> void:
 	if not driving and is_instance_valid(shop_door_pivot) and is_instance_valid(shop_interaction_button):
 		var shop_distance := player.global_position.distance_to(shop_entrance_position)
 		shop_interaction_button.visible = shop_distance < 4.8
-		if shop_distance >= 4.0:
-			shop_interaction_button.text = "OPEN SHOP" if not shop_door_open else "CLOSE SHOP"
+		shop_interaction_button.text = "OPEN SHOP" if not shop_door_open else "CLOSE SHOP"
+		var counter_distance := player.global_position.distance_to(shop_counter_position)
+		shop_purchase_button.visible = shop_door_open and counter_distance < 3.0
 	else:
 		if is_instance_valid(shop_interaction_button):
 			shop_interaction_button.visible = false
+		if is_instance_valid(shop_purchase_button):
+			shop_purchase_button.visible = false
 	if not mission_complete:
 		var actor_position := car.global_position if driving else player.global_position
 		if actor_position.distance_to(checkpoint.global_position) < 3.2:
