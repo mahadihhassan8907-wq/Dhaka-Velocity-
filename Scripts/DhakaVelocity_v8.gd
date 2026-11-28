@@ -1725,7 +1725,7 @@ func _update_day_night_visuals() -> void:
 	var angle := time_of_day * TAU - PI * 0.5
 	var daylight := clampf(sin(angle) * 1.8 + 0.15, 0.06, 1.0)
 	var night_factor := 1.0 - daylight
-	city_sun.rotation_degrees = Vector3(-90.0 + time_of_day * 360.0, -30.0, 0.0)
+	city_sun.rotation_degrees = Vector3(-180.0 + time_of_day * 360.0, -30.0, 0.0)
 	city_sun.light_energy = lerpf(0.12, 1.25, daylight)
 	city_sun.light_color = Color(1.0, 0.72, 0.48).lerp(Color(1.0, 0.96, 0.86), daylight)
 	city_environment.ambient_light_color = Color(0.12, 0.17, 0.30).lerp(Color(0.62, 0.68, 0.76), daylight)
