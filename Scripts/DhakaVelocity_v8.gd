@@ -60,18 +60,7 @@ class VirtualSteeringWheel extends Control:
 		steering_changed.emit(steering_value)
 		queue_redraw()
 
-	
-func _process(delta: float) -> void:
-	time_of_day = fposmod(time_of_day + delta / 2880.0, 1.0)
-	_update_day_night_visuals()
-	world_clock_refresh += delta
-	if world_clock_refresh >= 1.0:
-		world_clock_refresh = 0.0
-		_update_world_clock()
-	world_time_save_refresh += delta
-	if world_time_save_refresh >= 30.0:
-		world_time_save_refresh = 0.0
-		_save_game_settings()
+	func _process(delta: float) -> void:
 		if not dragging and absf(steering_value) > 0.01:
 			steering_value = move_toward(steering_value, 0.0, delta * 2.8)
 			steering_changed.emit(steering_value)
@@ -2135,6 +2124,16 @@ func _zoom_out() -> void:
 	camera_zoom = clampf(camera_zoom + 0.18, 0.25, 2.5)
 
 func _process(delta: float) -> void:
+	time_of_day = fposmod(time_of_day + delta / 2880.0, 1.0)
+	_update_day_night_visuals()
+	world_clock_refresh += delta
+	if world_clock_refresh >= 1.0:
+		world_clock_refresh = 0.0
+		_update_world_clock()
+	world_time_save_refresh += delta
+	if world_time_save_refresh >= 30.0:
+		world_time_save_refresh = 0.0
+		_save_game_settings()
 	if not driving and is_instance_valid(shop_door_pivot) and is_instance_valid(shop_interaction_button):
 		var shop_distance := player.global_position.distance_to(shop_entrance_position)
 		shop_interaction_button.visible = shop_distance < 4.8
